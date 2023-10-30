@@ -29,6 +29,7 @@ public:
   ~R_SPICE();
   Component* newOne();
   static Element* info(QString&, char* &, bool getNewOne=false);
+  static Element* info_XR(QString&, char* &, bool getNewOne=false);
 protected:
   QString netlist();
   QString spice_netlist(bool isXyce = false);

@@ -78,6 +78,24 @@ Element* R_SPICE::info(QString& Name, char* &BitmapFile, bool getNewOne)
   return 0;
 }
 
+
+Element* R_SPICE::info_XR(QString& Name, char* &BitmapFile, bool getNewOne)
+{
+  Name = QObject::tr("R(X Resistor)");
+  BitmapFile = (char *) "R_SPICE";
+
+  if(getNewOne)  {
+      R_SPICE *p = new R_SPICE();
+      p->Name = "X";
+      p->SpiceModel = "X";
+      p->Props.at(0)->Value = "X";
+      p->recreate(0);
+      return p;
+  }
+  return 0;
+}
+
+
 QString R_SPICE::netlist()
 {
     return QString("");

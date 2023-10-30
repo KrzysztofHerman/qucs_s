@@ -119,13 +119,14 @@ Element* BJT_SPICE::info(QString& Name, char* &BitmapFile, bool getNewOne)
 
 Element* BJT_SPICE::infoNPN4(QString& Name, char* &BitmapFile, bool getNewOne)
 {
-  Name = QObject::tr("Q(NPN) 4 pin");
+  Name = QObject::tr("X(NPN) 4 pin");
   BitmapFile = (char *) "NPN4_SPICE";
 
   if(getNewOne)  {
       auto p = new BJT_SPICE();
       p->Props.at(0)->Value = "4";
       p->Props.at(1)->Value = "npn";
+      p->Props.at(2)->Value = "X";
       p->recreate(0);
       return p;
   }
@@ -199,7 +200,7 @@ QString BJT_SPICE::spice_netlist(bool)
     QString Q_Line_4= Props.at(5)->Value;
     QString Q_Line_5= Props.at(6)->Value;
 
-    if(  Q.length()  > 0)          s += QString("%1").arg(Q);
+ //   if(  Q.length()  > 0)          s += QString("%1").arg(Q);
     if(  Q_Line_2.length() > 0 )   s += QString("\n%1").arg(Q_Line_2);
     if(  Q_Line_3.length() > 0 )   s += QString("\n%1").arg(Q_Line_3);
     if(  Q_Line_4.length() > 0 )   s += QString("\n%1").arg(Q_Line_4);

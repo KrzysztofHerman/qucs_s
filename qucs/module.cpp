@@ -250,6 +250,7 @@ void Module::registerModules (void) {
   unregisterModules();
 
   REGISTER_LUMPED_2 (Resistor, info, info_us);
+  REGISTER_LUMPED_2 (R_SPICE, info, info_XR);
   REGISTER_LUMPED_1 (Capacitor);
   REGISTER_LUMPED_1 (Inductor);
   REGISTER_LUMPED_1 (IndQ);
@@ -259,7 +260,7 @@ void Module::registerModules (void) {
   REGISTER_LUMPED_1 (MutualX);
   // lumped components
   //if (QucsSettings.DefaultSimulator != spicecompat::simQucsator) {
-      REGISTER_LUMPED_1 (R_SPICE);
+      //REGISTER_LUMPED_1 (R_SPICE);
       REGISTER_LUMPED_1 (C_SPICE);
       REGISTER_LUMPED_1 (L_SPICE);
       REGISTER_LUMPED_1 (K_SPICE);
