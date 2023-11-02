@@ -19,6 +19,7 @@
  *                                                                         *
  ***************************************************************************/
 #include "R_SPICE.h"
+#include "components/component.h"
 #include "node.h"
 #include "misc.h"
 #include "extsimkernels/spicecompat.h"
@@ -49,11 +50,12 @@ R_SPICE::R_SPICE()
     SpiceModel = "R";
     Name  = "R";
 
-    Props.append(new Property("R", "", true,"R param list and\n .model spec."));
-    Props.append(new Property("R_Line 2", "", false,"+ continuation line 1"));
-    Props.append(new Property("R_Line 3", "", false,"+ continuation line 2"));
-    Props.append(new Property("R_Line 4", "", false,"+ continuation line 3"));
-    Props.append(new Property("R_Line 5", "", false,"+ continuation line 4"));
+    Props.append(new Property("model", "", true,"modelname"));
+    Props.append(new Property("Letter", "X", false,"[R,X]"));
+    Props.append(new Property("W", "1u", true,"Width"));
+    Props.append(new Property("L", "10u", true,"Length"));
+// Here calculate an initial value based on resistor type and its W and L
+    Props.append(new Property("R", "value", true,"Resistance value"));
 
 
 
@@ -79,23 +81,6 @@ Element* R_SPICE::info(QString& Name, char* &BitmapFile, bool getNewOne)
 }
 
 
-Element* R_SPICE::info_XR(QString& Name, char* &BitmapFile, bool getNewOne)
-{
-  Name = QObject::tr("R(X Resistor)");
-  BitmapFile = (char *) "R_SPICE";
-
-  if(getNewOne)  {
-      R_SPICE *p = new R_SPICE();
-      p->Name = "X";
-      p->SpiceModel = "X";
-      p->Props.at(0)->Value = "X";
-      p->recreate(0);
-      return p;
-  }
-  return 0;
-}
-
-
 QString R_SPICE::netlist()
 {
     return QString("");
@@ -103,24 +88,21 @@ QString R_SPICE::netlist()
 
 QString R_SPICE::spice_netlist(bool)
 {
-    QString s = spicecompat::check_refdes(Name,SpiceModel);
+    QString ltr =getProperty("Letter")->Value;
+    QString s = spicecompat::check_refdes(Name,ltr);
     for (Port *p1 : Ports) {
         QString nam = p1->Connection->Name;
         if (nam=="gnd") nam = "0";
         s += " "+ nam+" ";   // node names
     }
 
-    QString R= Props.at(0)->Value;
-    QString R_Line_2= Props.at(1)->Value;
-    QString R_Line_3= Props.at(2)->Value;
-    QString R_Line_4= Props.at(3)->Value;
-    QString R_Line_5= Props.at(4)->Value;
+    QString R = Props.at(0)->Value;
+    QString W = getProperty("W")->Value;
+    QString L = getProperty("L")->Value;
 
-    if(  R.length()  > 0)          s += QString("%1").arg(R);
-    if(  R_Line_2.length() > 0 )   s += QString("\n%1").arg(R_Line_2);
-    if(  R_Line_3.length() > 0 )   s += QString("\n%1").arg(R_Line_3);
-    if(  R_Line_4.length() > 0 )   s += QString("\n%1").arg(R_Line_4);
-    if(  R_Line_5.length() > 0)    s += QString("\n%1").arg(R_Line_5);
+    if(  R.length()  > 0)          s += QString("%1 ").arg(R);
+    if(  W.length() > 0 )   s += QString("W=%1 ").arg(W);
+    if(  L.length() > 0 )   s += QString("L=%1 ").arg(L);
     s += "\n";
 
     return s;
