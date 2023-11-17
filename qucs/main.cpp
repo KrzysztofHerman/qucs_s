@@ -19,6 +19,8 @@
  * \brief Implementation of the main application.
  */
 
+#include <cstddef>
+#include <cstdlib>
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif
@@ -883,11 +885,17 @@ int main(int argc, char *argv[])
       QucsSettings.QucsatorVar = "";
   }
 
+
+  var = getenv("PDK_ROOT");
+
+  if(var!= NULL)
+    fprintf(stdout,"root dir = %s\n",var);
+
+
   var = getenv("QUCSCONV");
   if(var != NULL) {
       QucsSettings.Qucsconv = QString(var);
   }
-
 
   var = getenv("ADMSXMLBINDIR");
   if(var != NULL) {

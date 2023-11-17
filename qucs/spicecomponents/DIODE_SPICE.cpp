@@ -53,11 +53,10 @@ DIODE_SPICE::DIODE_SPICE()
     SpiceModel = "D";
     Name  = "D";
 
-    Props.append(new Property("D", "", true,"Param list and\n .model spec."));
-    Props.append(new Property("D_Line 2", "", false,"+ continuation line 1"));
-    Props.append(new Property("D_Line 3", "", false,"+ continuation line 2"));
-    Props.append(new Property("D_Line 4", "", false,"+ continuation line 3"));
-    Props.append(new Property("D_Line 5", "", false,"+ continuation line 4"));
+    Props.append(new Property("model", "", true,"modelname"));
+    Props.append(new Property("Letter", "X", false,"[D,X]"));
+    Props.append(new Property("W", "0.78u", true,"Width"));
+    Props.append(new Property("L", "0.78u", true,"Length"));
 
 }
 
@@ -86,24 +85,21 @@ QString DIODE_SPICE::netlist()
 
 QString DIODE_SPICE::spice_netlist(bool)
 {
-    QString s = spicecompat::check_refdes(Name,SpiceModel);
+    QString ltr =getProperty("Letter")->Value;
+    QString s = spicecompat::check_refdes(Name,ltr);
     for (Port *p1 : Ports) {
         QString nam = p1->Connection->Name;
         if (nam=="gnd") nam = "0";
         s += " "+ nam+" ";   // node names
     }
  
-    QString D= Props.at(0)->Value;
-    QString D_Line_2= Props.at(1)->Value;
-    QString D_Line_3= Props.at(2)->Value;
-    QString D_Line_4= Props.at(3)->Value;
-    QString D_Line_5= Props.at(4)->Value;
+    QString D = Props.at(0)->Value;
+    QString W = getProperty("W")->Value;
+    QString L = getProperty("L")->Value;
 
-    if(  D.length()  > 0)          s += QString("%1").arg(D);
-    if(  D_Line_2.length() > 0 )   s += QString("\n%1").arg(D_Line_2);
-    if(  D_Line_3.length() > 0 )   s += QString("\n%1").arg(D_Line_3);
-    if(  D_Line_4.length() > 0 )   s += QString("\n%1").arg(D_Line_4);
-    if(  D_Line_5.length() > 0 )   s += QString("\n%1").arg(D_Line_5);
+    if(  D.length() > 0)    s += QString("%1 ").arg(D);
+    if(  W.length() > 0 )   s += QString("W=%1 ").arg(W);
+    if(  L.length() > 0 )   s += QString("L=%1 ").arg(L);
     s += "\n";
     return s;
 }
