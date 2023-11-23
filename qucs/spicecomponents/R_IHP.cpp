@@ -73,13 +73,76 @@ Component* R_IHP::newOne()
 
 Element* R_IHP::info(QString& Name, char* &BitmapFile, bool getNewOne)
 {
-  Name = QObject::tr(" R Resistor");
+  Name = QObject::tr("rhigh");
   BitmapFile = (char *) "R_SPICE";
 
-  if(getNewOne)  return new R_IHP();
+  if(getNewOne){
+  R_IHP *p = new R_IHP();
+  p->Props.at(0)->Value = "rhigh";
+  return p;
+  }
   return 0;
 }
 
+Element* R_IHP::info_Rsil(QString& Name, char* &BitmapFile, bool getNewOne)
+{
+  Name = QObject::tr(" rsil");
+  BitmapFile = (char *) "R_SPICE";
+
+  if(getNewOne){
+  R_IHP *p = new R_IHP();
+  p->Props.at(0)->Value = "rsil";
+  return p;
+  }
+  return 0;
+}
+
+Element* R_IHP::info_Rppd(QString& Name, char* &BitmapFile, bool getNewOne)
+{
+  Name = QObject::tr(" rppd");
+  BitmapFile = (char *) "R_SPICE";
+
+  if(getNewOne){
+  R_IHP *p = new R_IHP();
+  p->Props.at(0)->Value = "rppd";
+  return p;
+  }
+  return 0;
+}
+Element* R_IHP::info_Rptap1(QString& Name, char* &BitmapFile, bool getNewOne)
+{
+  Name = QObject::tr("ptap1");
+  BitmapFile = (char *) "R_SPICE";
+
+  if(getNewOne){
+  R_IHP *p = new R_IHP();
+  p->Props.at(0)->Value = "ptap1";
+  p->Props.at(2)->Value = "";
+  p->Props.at(2)->display = false;
+  p->Props.at(3)->Value = "";
+  p->Props.at(3)->display = false;
+  p->Props.at(4)->Value = "283";
+  return p;
+  }
+  return 0;
+}
+Element* R_IHP::info_Rntap1(QString& Name, char* &BitmapFile, bool getNewOne)
+{
+  Name = QObject::tr("ntap1");
+  BitmapFile = (char *) "R_SPICE";
+
+  if(getNewOne){
+  R_IHP *p = new R_IHP();
+  p->Props.at(0)->Value = "ntap1";
+  p->Props.at(2)->Value = "";
+  p->Props.at(2)->display = false;
+  p->Props.at(3)->Value = "";
+  p->Props.at(3)->display = false;
+  p->Props.at(4)->Value = "283";
+  return p;
+  }
+  return 0;
+}
 
 QString R_IHP::netlist()
 {

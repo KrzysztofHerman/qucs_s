@@ -1,12 +1,12 @@
 /***************************************************************************
-                          R_SPICE.h  -  description
+                          NMOS_SPICE.h  -  description
                       --------------------------------------
-    begin                    : Fri Mar 9 2007
-    copyright              : (C) 2007 by Gunther Kraut
+    begin                     : Fri Mar 9 2007
+    copyright                 : (C) 2007 by Gunther Kraut
     email                     : gn.kraut@t-online.de
-    spice4qucs code added  Sun. 5 April 2015
-    copyright              : (C) 2015 by Mike Brinson
-    email                    : mbrin72043@yahoo.co.uk
+    spice4qucs code added  Sat. 30 May 2015
+    copyright                 : (C) 2015 by Mike Brinson
+    email                     : mbrin72043@yahoo.co.uk
 
  ***************************************************************************/
 
@@ -18,24 +18,24 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
- #ifndef R_IHP_H
-#define R_IHP_H
+ #ifndef MOS_IHP_H
+#define MOS_IHP_H
 
 #include "components/component.h"
 
-class R_IHP : public Component {
+class MOS_IHP : public MultiViewComponent {
 public:
-  R_IHP();
-  ~R_IHP();
+  MOS_IHP();
+  ~MOS_IHP();
   Component* newOne();
   static Element* info(QString&, char* &, bool getNewOne=false);
-  static Element* info_Rsil(QString&, char* &, bool getNewOne=false);
-  static Element* info_Rppd(QString&, char* &, bool getNewOne=false);
-  static Element* info_Rptap1(QString&, char* &, bool getNewOne=false);
-  static Element* info_Rntap1(QString&, char* &, bool getNewOne=false);
+  static Element* info_hv(QString&, char* &, bool getNewOne=false);
+  static Element* info_pmos(QString&, char* &, bool getNewOne=false);
+  static Element* info_hv_pmos(QString&, char* &, bool getNewOne=false);
 protected:
+  void createSymbol();
   QString netlist();
   QString spice_netlist(bool isXyce = false);
 };
 
-#endif // R_SPICE_H
+#endif // MOS_SPICE_H

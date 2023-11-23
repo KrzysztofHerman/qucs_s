@@ -255,7 +255,10 @@ void Module::registerModules (void) {
   unregisterModules();
 
   REGISTER_IHP_1 (R_IHP);
-  REGISTER_IHP_2 (MOS_SPICE,info_NX4pin,info_PX4pin);
+  REGISTER_IHP_2 (R_IHP,info_Rppd,info_Rsil);
+  REGISTER_IHP_2 (R_IHP,info_Rptap1,info_Rntap1);
+  REGISTER_IHP_2 (MOS_IHP,info,info_hv);
+  REGISTER_IHP_2 (MOS_IHP,info_pmos,info_hv_pmos);
   
   REGISTER_LUMPED_2 (Resistor, info, info_us);
   REGISTER_LUMPED_1 (Capacitor);

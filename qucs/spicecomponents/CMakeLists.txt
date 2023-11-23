@@ -38,7 +38,6 @@ vTRRANDOM.cpp
 C_SPICE.cpp
 L_SPICE.cpp
 R_SPICE.cpp
-R_IHP.cpp
 K_SPICE.cpp
 MESFET_SPICE.cpp
 PMF_MESFET_SPICE.cpp
@@ -55,6 +54,10 @@ NMOS_SPICE.cpp
 PMOS_SPICE.cpp
 MOS_SPICE.cpp
 volt_ac_SPICE.cpp
+
+# IHP PDK elemends
+R_IHP.cpp
+MOS_IHP.cpp
 
 # SPICE simulations list
 

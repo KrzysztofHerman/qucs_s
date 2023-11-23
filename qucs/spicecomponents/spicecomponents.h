@@ -41,7 +41,6 @@
 #include "C_SPICE.h"
 #include "L_SPICE.h"
 #include "R_SPICE.h"
-#include "R_IHP.h"
 #include "K_SPICE.h"
 #include "LTL_SPICE.h"
 #include "UDRCTL_SPICE.h"
@@ -58,6 +57,12 @@
 #include "MOS_SPICE.h"
 #include "MESFET_SPICE.h"
 #include "PMF_MESFET_SPICE.h"
+
+
+//IHP PDK elements
+
+#include "R_IHP.h"
+#include "MOS_IHP.h"
 
 // XSPICE analogue blocks
 #include "Icouple.h"
