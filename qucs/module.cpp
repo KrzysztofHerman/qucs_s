@@ -243,12 +243,20 @@ void Module::intoCategory (Module * m) {
 #define REGISTER_QUCS_3(val,inf1,inf2,inf3) \
   REGISTER_COMP_3 (QObject::tr("Qucs legacy devices"),val,inf1,inf2,inf3)
 
+// IHP COmponent list 
+#define REGISTER_IHP_1(val) \
+  REGISTER_COMP_1 (QObject::tr("IHP PDK Components"),val)
+#define REGISTER_IHP_2(val,inf1,inf2) \
+  REGISTER_COMP_2 (QObject::tr("IHP PDK Components"),val,inf1,inf2)
 // This function has to be called once at application startup.  It
 // registers every component available in the application.  Put here
 // any new component.
 void Module::registerModules (void) {
   unregisterModules();
 
+  REGISTER_IHP_1 (R_IHP);
+  REGISTER_IHP_2 (MOS_SPICE,info_NX4pin,info_PX4pin);
+  
   REGISTER_LUMPED_2 (Resistor, info, info_us);
   REGISTER_LUMPED_1 (Capacitor);
   REGISTER_LUMPED_1 (Inductor);

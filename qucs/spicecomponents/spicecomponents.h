@@ -41,6 +41,7 @@
 #include "C_SPICE.h"
 #include "L_SPICE.h"
 #include "R_SPICE.h"
+#include "R_IHP.h"
 #include "K_SPICE.h"
 #include "LTL_SPICE.h"
 #include "UDRCTL_SPICE.h"

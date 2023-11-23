@@ -18,14 +18,14 @@
  *   (at your option) any later version.                                   *
  *                                                                         *
  ***************************************************************************/
-#include "R_SPICE.h"
+#include "R_IHP.h"
 #include "components/component.h"
 #include "node.h"
 #include "misc.h"
 #include "extsimkernels/spicecompat.h"
 
 
-R_SPICE::R_SPICE()
+R_IHP::R_IHP()
 {
     Description = QObject::tr("SPICE R:\nMultiple line ngspice or Xyce R specifications allowed using \"+\" continuation lines.\nLeave continuation lines blank when NOT in use.  ");
     Simulator = spicecompat::simSpice;
@@ -46,7 +46,7 @@ R_SPICE::R_SPICE()
     tx = x1+4;
     ty = y2+4;
 
-    Model = "R_SPICE";
+    Model = "R_IHP";
     SpiceModel = "R";
     Name  = "R";
 
@@ -62,31 +62,31 @@ R_SPICE::R_SPICE()
     rotate();  // fix historical flaw
 }
 
-R_SPICE::~R_SPICE()
+R_IHP::~R_IHP()
 {
 }
 
-Component* R_SPICE::newOne()
+Component* R_IHP::newOne()
 {
-  return new R_SPICE();
+  return new R_IHP();
 }
 
-Element* R_SPICE::info(QString& Name, char* &BitmapFile, bool getNewOne)
+Element* R_IHP::info(QString& Name, char* &BitmapFile, bool getNewOne)
 {
   Name = QObject::tr(" R Resistor");
   BitmapFile = (char *) "R_SPICE";
 
-  if(getNewOne)  return new R_SPICE();
+  if(getNewOne)  return new R_IHP();
   return 0;
 }
 
 
-QString R_SPICE::netlist()
+QString R_IHP::netlist()
 {
     return QString("");
 }
 
-QString R_SPICE::spice_netlist(bool)
+QString R_IHP::spice_netlist(bool)
 {
     QString ltr =getProperty("Letter")->Value;
     QString s = spicecompat::check_refdes(Name,ltr);

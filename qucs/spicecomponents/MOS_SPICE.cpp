@@ -29,14 +29,14 @@ MOS_SPICE::MOS_SPICE()
   Description = QObject::tr("Unified (M,X,3-,4-pin) MOS:\nMultiple line ngspice or Xyce M model specifications allowed using \"+\" continuation lines.\nLeave continuation lines blank when NOT in use.");
   Simulator = spicecompat::simSpice;
 
-  Props.append(new Property("Letter", "M", true,"[M,X] SPICE letter"));
-  Props.append(new Property("Pins", "4", true,"[3,4] Pins count"));
+  Props.append(new Property("Letter", "M", false,"[M,X] SPICE letter"));
+  Props.append(new Property("Pins", "4", false,"[3,4] Pins count"));
   Props.append(new Property("type", "nmos", true,"[nmos,pmos] Channel type"));
-  Props.append(new Property("M", "", true,"Param list and\n .model spec."));
-  Props.append(new Property("M_Line 2", "", false,"+ continuation line 1"));
-  Props.append(new Property("M_Line 3", "", false,"+ continuation line 2"));
-  Props.append(new Property("M_Line 4", "", false,"+ continuation line 3"));
-  Props.append(new Property("M_Line 5", "", false,"+ continuation line 4"));
+  Props.append(new Property("model", "sg13g2_lv_nmos", true,"[sg13g2_lv_nmos,sg13g2_hv_nmos]"));
+  Props.append(new Property("W", "1u", true,"Width"));
+  Props.append(new Property("L", "1u", true,"Length"));
+  Props.append(new Property("ng", "", false,"no. gatess"));
+  Props.append(new Property("m", "", false,"no. devices"));
 
   createSymbol();
 
@@ -237,10 +237,10 @@ QString MOS_SPICE::spice_netlist(bool)
     QString M_Line_5= Props.at(7)->Value;
 
     if(  M.length()  > 0)          s += QString("%1").arg(M);
-    if(  M_Line_2.length() > 0 )   s += QString("\n%1").arg(M_Line_2);
-    if(  M_Line_3.length() > 0 )   s += QString("\n%1").arg(M_Line_3);
-    if(  M_Line_4.length() > 0 )   s += QString("\n%1").arg(M_Line_4);
-    if(  M_Line_5.length() > 0 )   s += QString("\n%1").arg(M_Line_5);
+    if(  M_Line_2.length() > 0 )   s += QString(" W=%1").arg(M_Line_2);
+    if(  M_Line_3.length() > 0 )   s += QString(" L=%1").arg(M_Line_3);
+    if(  M_Line_4.length() > 0 )   s += QString(" ng=%1").arg(M_Line_4);
+    if(  M_Line_5.length() > 0 )   s += QString(" m=%1").arg(M_Line_5);
     s += "\n";
 
     return s;

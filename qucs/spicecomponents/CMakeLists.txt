@@ -38,6 +38,7 @@ vTRRANDOM.cpp
 C_SPICE.cpp
 L_SPICE.cpp
 R_SPICE.cpp
+R_IHP.cpp
 K_SPICE.cpp
 MESFET_SPICE.cpp
 PMF_MESFET_SPICE.cpp
