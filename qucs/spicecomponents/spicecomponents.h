@@ -62,7 +62,10 @@
 //IHP PDK elements
 
 #include "R_IHP.h"
+#include "C_IHP.h"
 #include "MOS_IHP.h"
+#include "BJT_IHP.h"
+#include "DIODE_IHP.h"
 
 // XSPICE analogue blocks
 #include "Icouple.h"

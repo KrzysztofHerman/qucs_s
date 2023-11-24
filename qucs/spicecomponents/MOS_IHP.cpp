@@ -26,17 +26,16 @@
 
 MOS_IHP::MOS_IHP()
 {
-  Description = QObject::tr("Unified (M,X,3-,4-pin) MOS:\nMultiple line ngspice or Xyce M model specifications allowed using \"+\" continuation lines.\nLeave continuation lines blank when NOT in use.");
+  Description = QObject::tr("4-pin MOS:\nMultiple line ngspice or Xyce M model specifications allowed using \"+\" continuation lines.\nLeave continuation lines blank when NOT in use.");
   Simulator = spicecompat::simSpice;
 
   Props.append(new Property("Letter", "X", false,"SPICE letter"));
-  Props.append(new Property("Pins", "4", false,"Pins count"));
   Props.append(new Property("type", "nmos", false,"Channel type"));
   Props.append(new Property("model", "sg13_lv_nmos", true,"[sg13_lv_nmos,sg13_hv_nmos]"));
   Props.append(new Property("W", "1u", true,"Width"));
   Props.append(new Property("L", "1u", true,"Length"));
-  Props.append(new Property("ng", "", false,"no. gatess"));
-  Props.append(new Property("m", "", false,"no. devices"));
+  Props.append(new Property("ng", "1", false,"no. gatess"));
+  Props.append(new Property("m", "1", false,"no. devices"));
 
   createSymbol();
 
@@ -67,7 +66,7 @@ Element* MOS_IHP::info(QString& Name, char* &BitmapFile, bool getNewOne)
 
   if(getNewOne){ 
     MOS_IHP *p = new MOS_IHP();
-    p->Props.at(3)->Value = "sg13_lv_nmos"; 
+    p->Props.at(2)->Value = "sg13_lv_nmos"; 
     p->recreate(0);
   return p;
   }
@@ -81,7 +80,7 @@ Element* MOS_IHP::info_hv(QString& Name, char* &BitmapFile, bool getNewOne)
 
   if(getNewOne)  {
       MOS_IHP *p = new MOS_IHP();
-      p->Props.at(3)->Value = "sg13_hv_nmos"; 
+      p->Props.at(2)->Value = "sg13_hv_nmos"; 
       p->recreate(0);
       return p;
   }
@@ -95,8 +94,8 @@ Element* MOS_IHP::info_pmos(QString& Name, char* &BitmapFile, bool getNewOne)
 
   if(getNewOne)  {
       MOS_IHP *p = new MOS_IHP();
-      p->Props.at(2)->Value = "pmos"; 
-      p->Props.at(3)->Value = "sg13_lv_pmos"; 
+      p->Props.at(1)->Value = "pmos"; 
+      p->Props.at(2)->Value = "sg13_lv_pmos"; 
       p->recreate(0);
       return p;
   }
@@ -110,8 +109,8 @@ Element* MOS_IHP::info_hv_pmos(QString& Name, char* &BitmapFile, bool getNewOne)
 
   if(getNewOne)  {
       MOS_IHP *p = new MOS_IHP();
-      p->Props.at(2)->Value = "pmos"; 
-      p->Props.at(3)->Value = "sg13_hv_pmos"; 
+      p->Props.at(1)->Value = "pmos"; 
+      p->Props.at(2)->Value = "sg13_hv_pmos"; 
       p->recreate(0);
       return p;
   }
@@ -148,16 +147,11 @@ void MOS_IHP::createSymbol()
     Ports.append(new Port(  0,-30)); //D
     Ports.append(new Port(-30,  0)); //G
     Ports.append(new Port(  0, 30)); //S
-    if (Props.at(1)->Value=="4") {
-        Ports.append(new Port( 20,  0)); //B
-        Lines.append(new qucs::Line( 10,  0, 20,  0,QPen(Qt::darkBlue,2)));
-        Lines.append(new qucs::Line(-10,  0, 10,  0,QPen(Qt::darkRed,2)));
-    } else {
-        Lines.append(new qucs::Line(-10,  0, 0,  0,QPen(Qt::darkRed,2)));
-        Lines.append(new qucs::Line(0,  0, 0,  10,QPen(Qt::darkRed,2)));
-    }
+    Ports.append(new Port( 20,  0)); //B
+    Lines.append(new qucs::Line( 10,  0, 20,  0,QPen(Qt::darkBlue,2)));
+    Lines.append(new qucs::Line(-10,  0, 10,  0,QPen(Qt::darkRed,2)));
 
-    if (Props.at(2)->Value=="nmos") {
+    if (Props.at(1)->Value=="nmos") {
         Lines.append(new qucs::Line( -9,  0, -4, -5,QPen(Qt::darkRed,2)));
         Lines.append(new qucs::Line( -9,  0, -4,  5,QPen(Qt::darkRed,2)));
     } else {
@@ -175,17 +169,18 @@ QString MOS_IHP::spice_netlist(bool)
         s += " "+ nam+" ";   // node names
     }
  
-    QString M= Props.at(3)->Value;
-    QString M_Line_2= Props.at(4)->Value;
-    QString M_Line_3= Props.at(5)->Value;
-    QString M_Line_4= Props.at(6)->Value;
-    QString M_Line_5= Props.at(7)->Value;
+    QString model = getProperty("model")->Value;
+    QString W     = getProperty("W")->Value;
+    QString L     = getProperty("L")->Value;
+    QString ng    = getProperty("ng")->Value;
+    QString m     = getProperty("m")->Value;
 
-    if(  M.length()  > 0)          s += QString("%1").arg(M);
-    if(  M_Line_2.length() > 0 )   s += QString(" W=%1").arg(M_Line_2);
-    if(  M_Line_3.length() > 0 )   s += QString(" L=%1").arg(M_Line_3);
-    if(  M_Line_4.length() > 0 )   s += QString(" ng=%1").arg(M_Line_4);
-    if(  M_Line_5.length() > 0 )   s += QString(" m=%1").arg(M_Line_5);
+
+    if(  model.length()  > 0)  s += QString("%1").arg(model);
+    if(  W.length() > 0 )      s += QString(" W=%1").arg(W);
+    if(  L.length() > 0 )      s += QString(" L=%1").arg(L);
+    if(  ng.length() > 0 )     s += QString(" ng=%1").arg(ng);
+    if(  m.length() > 0 )      s += QString(" m=%1").arg(m);
     s += "\n";
 
     return s;

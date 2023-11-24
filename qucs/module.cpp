@@ -259,6 +259,10 @@ void Module::registerModules (void) {
   REGISTER_IHP_2 (R_IHP,info_Rptap1,info_Rntap1);
   REGISTER_IHP_2 (MOS_IHP,info,info_hv);
   REGISTER_IHP_2 (MOS_IHP,info_pmos,info_hv_pmos);
+  REGISTER_IHP_1 (BJT_IHP);
+  REGISTER_IHP_2 (BJT_IHP,info_l,info_v);
+  REGISTER_IHP_1 (C_IHP);
+  REGISTER_IHP_1 (DIODE_IHP);
   
   REGISTER_LUMPED_2 (Resistor, info, info_us);
   REGISTER_LUMPED_1 (Capacitor);

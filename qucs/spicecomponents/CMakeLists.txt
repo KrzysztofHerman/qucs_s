@@ -57,7 +57,10 @@ volt_ac_SPICE.cpp
 
 # IHP PDK elemends
 R_IHP.cpp
+C_IHP.cpp
 MOS_IHP.cpp
+BJT_IHP.cpp
+DIODE_IHP.cpp
 
 # SPICE simulations list
 
