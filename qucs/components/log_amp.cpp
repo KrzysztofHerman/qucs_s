@@ -14,7 +14,7 @@
 log_amp::log_amp()
 {
   Description = QObject::tr ("Logarithmic Amplifier verilog device");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Props.append (new Property ("Kv", "1.0", false,
     QObject::tr ("scale factor")));

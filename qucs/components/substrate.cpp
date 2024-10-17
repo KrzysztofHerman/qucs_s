@@ -22,7 +22,7 @@
 Substrate::Substrate()
 {
   Description = QObject::tr("substrate definition");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Lines.append(new qucs::Line(-30,-16, 30,-16,QPen(Qt::darkBlue,2)));
   Lines.append(new qucs::Line(-30,-12, 30,-12,QPen(Qt::darkBlue,2)));

@@ -22,7 +22,7 @@
 MScross::MScross()
 {
   Description = QObject::tr("microstrip cross");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Model = "MCROSS";
   Name  = "MS";

@@ -22,7 +22,7 @@
 MSlange::MSlange()
 {
   Description = QObject::tr("microstrip lange coupler");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Lines.append(new qucs::Line(-30,-30,-30, 10,QPen(Qt::darkBlue,2)));
   Lines.append(new qucs::Line(-30, 30,-30, 20,QPen(Qt::darkBlue,2)));

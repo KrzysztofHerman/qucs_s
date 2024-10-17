@@ -14,7 +14,7 @@
 photodiode::photodiode()
 {
   Description = QObject::tr ("Photodiode verilog device");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Props.append (new Property ("N", "1.35", false,
     QObject::tr ("photodiode emission coefficient")));

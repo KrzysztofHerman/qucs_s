@@ -45,7 +45,7 @@ circularloop::circularloop()
   ty = y1+40;
   Model = "CIRCULARLOOP";
   Name  = "CIRCULARLOOP";
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Props.append(new Property("Subst", "Subst1", true,
 		QObject::tr("Substrate")));

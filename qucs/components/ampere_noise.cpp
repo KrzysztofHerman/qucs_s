@@ -23,7 +23,7 @@
 Ampere_noise::Ampere_noise()
 {
   Description = QObject::tr("noise current source");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Ellipses.append(new qucs::Ellips(-12,-12, 24, 24, QPen(Qt::darkBlue,2)));
   // pins

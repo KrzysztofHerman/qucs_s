@@ -28,7 +28,7 @@
 Optimize_Sim::Optimize_Sim()
 {
   Description = QObject::tr("Optimization");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
   initSymbol(Description);
   Model = ".Opt";
   Name  = "Opt";

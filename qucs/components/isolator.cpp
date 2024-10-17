@@ -22,7 +22,7 @@
 Isolator::Isolator()
 {
   Description = QObject::tr("isolator");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Lines.append(new qucs::Line( -8,  0,  8,  0,QPen(Qt::darkBlue,3)));
   Lines.append(new qucs::Line(  8,  0,  0, -5,QPen(Qt::darkBlue,3)));

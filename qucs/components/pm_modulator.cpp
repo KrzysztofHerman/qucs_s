@@ -22,7 +22,7 @@
 PM_Modulator::PM_Modulator()
 {
   Description = QObject::tr("ac voltage source with phase modulator");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Ellipses.append(new qucs::Ellips(-12,-12, 24, 24, QPen(Qt::darkBlue,2)));
   // wave

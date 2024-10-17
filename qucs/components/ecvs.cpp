@@ -20,7 +20,7 @@
 ecvs::ecvs()
 {
   Description = QObject::tr("externally controlled voltage source");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
 //  Arcs.append(new Arc( -3, -7,  7,  7,16*270, 16*180,QPen(Qt::darkBlue,2)));
 //  Arcs.append(new Arc( -3,  0,  7,  7, 16*90, 16*180,QPen(Qt::darkBlue,2)));

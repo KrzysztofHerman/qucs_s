@@ -26,7 +26,7 @@
 taperedline::taperedline()
 {
   Description = QObject::tr("Exponential Tapered line");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   //Lines connection device and ports
   Lines.append(new qucs::Line(-30,  0,-17,  0,QPen(Qt::darkBlue,2)));

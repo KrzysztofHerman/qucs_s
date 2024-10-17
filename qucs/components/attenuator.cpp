@@ -22,7 +22,7 @@
 Attenuator::Attenuator()
 {
   Description = QObject::tr("attenuator");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Lines.append(new qucs::Line( -4, -6, -4,  6,QPen(Qt::darkBlue,2)));
   Lines.append(new qucs::Line( -4, -6,  4, -6,QPen(Qt::darkBlue,2)));

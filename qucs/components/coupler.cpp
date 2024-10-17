@@ -22,7 +22,7 @@
 Coupler::Coupler()
 {
   Description = QObject::tr("ideal coupler");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Lines.append(new qucs::Line(-23,-24, 23,-24,QPen(Qt::darkGray,1)));
   Lines.append(new qucs::Line( 23,-24, 23, 24,QPen(Qt::darkGray,1)));

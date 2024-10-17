@@ -22,7 +22,7 @@
 AM_Modulator::AM_Modulator()
 {
   Description = QObject::tr("ac voltage source with amplitude modulator");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Ellipses.append(new qucs::Ellips(-12,-12, 24, 24,    QPen(Qt::darkBlue,2)));
   // wave

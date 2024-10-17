@@ -49,7 +49,7 @@ spiralinductor::spiralinductor()
   ty = y1+50;
   Model = "SPIRALIND";
   Name  = "SPIRALIND";
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Props.append(new Property("Subst", "Subst1", true,
 		QObject::tr("Substrate")));

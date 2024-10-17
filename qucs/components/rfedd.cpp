@@ -24,7 +24,7 @@
 RFedd::RFedd()
 {
   Description = QObject::tr("equation defined RF device");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Model = "RFEDD";
   Name  = "RF";

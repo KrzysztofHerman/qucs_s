@@ -22,7 +22,7 @@
 Noise_vv::Noise_vv()
 {
   Description = QObject::tr("correlated current sources");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   // left noise source
   Arcs.append(new qucs::Arc(-42,-12, 24, 24,  0, 16*360,QPen(Qt::darkBlue,2)));

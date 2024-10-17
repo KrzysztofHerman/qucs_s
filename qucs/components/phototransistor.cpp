@@ -14,7 +14,7 @@
 phototransistor::phototransistor()
 {
   Description = QObject::tr ("Phototransistor verilog device");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Props.append (new Property ("Bf", "100", false,
     QObject::tr ("forward beta")));

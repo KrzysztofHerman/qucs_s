@@ -25,7 +25,7 @@
 symTrafo::symTrafo()
 {
   Description = QObject::tr("ideal symmetrical transformer");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   QFont Font(QucsSettings.font); // default application font
   // symbol text is smaller (10 pt default)

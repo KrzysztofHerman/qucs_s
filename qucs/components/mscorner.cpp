@@ -22,7 +22,7 @@
 MScorner::MScorner()
 {
   Description = QObject::tr("microstrip corner");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Lines.append(new qucs::Line(-30,  0,-18,  0,QPen(Qt::darkBlue,2)));
   Lines.append(new qucs::Line(  0, 18,  0, 30,QPen(Qt::darkBlue,2)));

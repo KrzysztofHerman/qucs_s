@@ -22,7 +22,7 @@
 BondWire::BondWire()
 {
   Description = QObject::tr("bond wire");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Lines.append(new qucs::Line(-30, 0,-8, 0,QPen(Qt::darkBlue,3)));
   Lines.append(new qucs::Line( 30, 0, 8, 0,QPen(Qt::darkBlue,3)));

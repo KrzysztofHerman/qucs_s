@@ -22,7 +22,7 @@
 Amplifier::Amplifier()
 {
   Description = QObject::tr("ideal amplifier");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Lines.append(new qucs::Line(-16,-20,-16, 20,QPen(Qt::darkBlue,2)));
   Lines.append(new qucs::Line(-16,-20, 16,  0,QPen(Qt::darkBlue,2)));

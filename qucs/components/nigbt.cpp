@@ -14,7 +14,7 @@
 nigbt::nigbt()
 {
   Description = QObject::tr ("NIGBT verilog device");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Props.append (new Property ("Agd", "5.0e-6", false,
     QObject::tr ("gate-drain overlap area")

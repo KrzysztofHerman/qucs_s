@@ -23,7 +23,7 @@
 MSvia::MSvia()
 {
   Description = QObject::tr("microstrip via");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Arcs.append(new qucs::Arc(-5,-4, 10,  7,  0, 16*360,QPen(Qt::darkBlue,2)));
   Lines.append(new qucs::Line(-20,  0, -5,  0,QPen(Qt::darkBlue,2)));

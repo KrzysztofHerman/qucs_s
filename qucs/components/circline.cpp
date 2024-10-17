@@ -28,7 +28,7 @@
 CircLine::CircLine()
 {
   Description = QObject::tr("Circular Waveguide");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Arcs.append(new qucs::Arc(-20, -9, 18, 18,     0, 16*360,QPen(Qt::darkBlue,2)));
   Arcs.append(new qucs::Arc(-18, -7, 14, 14,     0, 16*360,QPen(Qt::darkBlue,2)));

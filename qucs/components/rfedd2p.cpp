@@ -26,7 +26,7 @@
 RFedd2P::RFedd2P()
 {
   Description = QObject::tr("equation defined 2-port RF device");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Model = "RFEDD2P";
   Name  = "RF";

@@ -22,7 +22,7 @@
 Noise_iv::Noise_iv()
 {
   Description = QObject::tr("correlated current sources");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   // left noise source
   Ellipses.append(new qucs::Ellips(-42,-12, 24, 24, QPen(Qt::darkBlue,2)));

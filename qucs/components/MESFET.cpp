@@ -14,7 +14,7 @@
 MESFET::MESFET()
 {
   Description = QObject::tr ("MESFET verilog device");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
 
   Props.append (new Property ("LEVEL", "1", false,
     QObject::tr ("model selector")));

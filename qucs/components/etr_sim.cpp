@@ -20,7 +20,7 @@
 ETR_Sim::ETR_Sim()
 {
   Description = QObject::tr("externally driven transient simulation");
-  Simulator = spicecompat::simQucsator;
+  Simulator = spicecompat::simAll;
   initSymbol(Description);
   Model = ".ETR";
   Name  = "ETR";
