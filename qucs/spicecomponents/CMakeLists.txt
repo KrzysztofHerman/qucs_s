@@ -10,7 +10,6 @@ src_eqndef.cpp
 #SPICE sections
 
 sp_parameter.cpp
-sp_csparameter.cpp
 sp_globalpar.cpp
 sp_options.cpp
 sp_nutmeg.cpp
@@ -54,6 +53,13 @@ PJF_SPICE.cpp
 NMOS_SPICE.cpp
 PMOS_SPICE.cpp
 MOS_SPICE.cpp
+
+# IHP PDK elemends
+R_IHP.cpp
+C_IHP.cpp
+MOS_IHP.cpp
+BJT_IHP.cpp
+DIODE_IHP.cpp
 
 # SPICE simulations list
 
@@ -105,7 +111,6 @@ src_eqndef.h
 #SPICE sections
 
 sp_parameter.h
-sp_csparameter.h
 sp_globalpar.h
 sp_options.h
 sp_nutmeg.h
@@ -191,8 +196,12 @@ spicelibcomp.h
 )
 
 
+
+#QT4_WRAP_CPP(COMPONENTS_MOC_SRCS ${COMPONENTS_MOC_HDRS})
+
 ADD_LIBRARY(spicecomponents STATIC ${COMPONENTS_HDRS} ${COMPONENTS_SRCS} ${COMPONENTS_MOC_SRCS} )
 
+#ADD_SUBDIRECTORY( symbols )
 
 
 

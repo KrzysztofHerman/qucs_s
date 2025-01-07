@@ -60,29 +60,27 @@ void Module::registerModule (QString category, pInfoFunc info) {
 // Component registration using a category name and the appropriate
 // function returning a components instance object.
 void Module::registerComponent(QString category, pInfoFunc info) {
+    Module *m = new Module();
+    m->info = info;
+    m->category = category;
 
-  // instantiation of the component once in order to obtain "Model"
-  // property of the component
-  QString Name;
-  char* File;
-  Component* c = (Component*)info(Name, File, true);
+    // instantiation of the component once in order to obtain "Model"
+    // property of the component
+    QString Name, Model;
+    char *File;
+    Component *c = (Component *) info(Name, File, true);
+    Model = c->Model;
 
-  // put into category and the component hash
-  if ((c->Simulator & QucsSettings.DefaultSimulator) ==
-      QucsSettings.DefaultSimulator) {
-    Module* m     = new Module();
-    m->info       = info;
-    m->category   = category;
-
-    m->icon = new QPixmap(128, 128);
+    m->icon = new QPixmap(128,128);
     c->paintIcon(m->icon);
 
-    intoCategory(m);
-    if (!Modules.contains(c->Model)) {
-      Modules.insert(c->Model, m);
+    // put into category and the component hash
+    if ((c->Simulator & QucsSettings.DefaultSimulator) == QucsSettings.DefaultSimulator) {
+        intoCategory(m);
     }
-  }
-  delete c;
+    delete c;
+    if (!Modules.contains(Model))
+        Modules.insert(Model, m);
 }
 
 // Returns instantiated component based on the given "Model" name.  If
@@ -182,8 +180,6 @@ void Module::intoCategory (Module * m) {
 
 #define REGISTER_COMP_1(cat,val) \
   registerComponent (cat, &val::info)
-#define REGISTER_SPECIFIC_COMP_1(cat,val,inf1) \
-registerComponent (cat, &val::inf1)
 #define REGISTER_COMP_2(cat,val,inf1,inf2) \
   registerComponent (cat, &val::inf1); \
   registerComponent (cat, &val::inf2)
@@ -200,8 +196,6 @@ registerComponent (cat, &val::inf1)
   REGISTER_COMP_1 (QObject::tr("sources"),val)
 #define REGISTER_PROBE_1(val) \
   REGISTER_COMP_1 (QObject::tr("probes"),val)
-#define REGISTER_RF_COMP_1(val) \
-  REGISTER_COMP_1 (QObject::tr("RF components"),val)
 #define REGISTER_TRANS_1(val) \
   REGISTER_COMP_1 (QObject::tr("transmission lines"),val)
 #define REGISTER_NONLINEAR_1(val) \
@@ -210,10 +204,6 @@ registerComponent (cat, &val::inf1)
   REGISTER_COMP_2 (QObject::tr("nonlinear components"),val,inf1,inf2)
 #define REGISTER_NONLINEAR_3(val,inf1,inf2,inf3) \
   REGISTER_COMP_3 (QObject::tr("nonlinear components"),val,inf1,inf2,inf3)
-#define REGISTER_MICROEL_1(val,inf1) \
-REGISTER_SPECIFIC_COMP_1 (QObject::tr("microelectronics"),val,inf1)
-#define REGISTER_MICROEL_2(val,inf1,inf2) \
-REGISTER_COMP_2 (QObject::tr("microelectronics"),val,inf1,inf2)
 #define REGISTER_VERILOGA_1(val) \
   REGISTER_COMP_1 (QObject::tr("verilog-a devices"),val)
 #define REGISTER_VERILOGA_2(val,inf1,inf2) \
@@ -241,7 +231,7 @@ REGISTER_COMP_2 (QObject::tr("microelectronics"),val,inf1,inf2)
 #define REGISTER_SPICE_1(val) \
   REGISTER_COMP_1 (QObject::tr("SPICE components"),val)
 #define REGISTER_SPICE_SEC_1(val) \
-  REGISTER_COMP_1 (QObject::tr("SPICE netlist sections"),val)
+  REGISTER_COMP_1 (QObject::tr("SPICE specific sections"),val)
 #define REGISTER_SPICE_SIM_1(val) \
   REGISTER_COMP_1 (QObject::tr("SPICE simulations"),val)
 #define REGISTER_XSPICE_1(val) \
@@ -253,18 +243,32 @@ REGISTER_COMP_2 (QObject::tr("microelectronics"),val,inf1,inf2)
 #define REGISTER_QUCS_3(val,inf1,inf2,inf3) \
   REGISTER_COMP_3 (QObject::tr("Qucs legacy devices"),val,inf1,inf2,inf3)
 
+// IHP COmponent list 
+#define REGISTER_IHP_1(val) \
+  REGISTER_COMP_1 (QObject::tr("IHP PDK Components"),val)
+#define REGISTER_IHP_2(val,inf1,inf2) \
+  REGISTER_COMP_2 (QObject::tr("IHP PDK Components"),val,inf1,inf2)
 // This function has to be called once at application startup.  It
 // registers every component available in the application.  Put here
 // any new component.
 void Module::registerModules (void) {
   unregisterModules();
 
+  REGISTER_IHP_1 (R_IHP);
+  REGISTER_IHP_2 (R_IHP,info_Rppd,info_Rsil);
+  REGISTER_IHP_2 (R_IHP,info_Rptap1,info_Rntap1);
+  REGISTER_IHP_2 (MOS_IHP,info,info_hv);
+  REGISTER_IHP_2 (MOS_IHP,info_pmos,info_hv_pmos);
+  REGISTER_IHP_1 (BJT_IHP);
+  REGISTER_IHP_2 (BJT_IHP,info_l,info_v);
+  REGISTER_IHP_1 (C_IHP);
+  REGISTER_IHP_1 (DIODE_IHP);
+  
   REGISTER_LUMPED_2 (Resistor, info, info_us);
   REGISTER_LUMPED_1 (Capacitor);
   REGISTER_LUMPED_1 (Inductor);
   REGISTER_LUMPED_1 (IndQ);
   REGISTER_LUMPED_1 (CapQ);
-  REGISTER_LUMPED_1 (potentiometer);
   REGISTER_LUMPED_1 (Mutual);
   REGISTER_LUMPED_1 (Mutual2);
   REGISTER_LUMPED_1 (MutualX);
@@ -281,8 +285,19 @@ void Module::registerModules (void) {
       REGISTER_LUMPED_1 (symTrafo);
       REGISTER_LUMPED_1 (Ground);
       REGISTER_LUMPED_1 (SubCirPort);
+      REGISTER_LUMPED_1 (dcBlock);
+      REGISTER_LUMPED_1 (dcFeed);
+      REGISTER_LUMPED_1 (BiasT);
+      REGISTER_LUMPED_1 (Attenuator);
+      REGISTER_LUMPED_1 (Amplifier);
+      REGISTER_LUMPED_1 (Isolator);
+      REGISTER_LUMPED_1 (Circulator);
       REGISTER_LUMPED_1 (Gyrator);
+      REGISTER_LUMPED_1 (Phaseshifter);
+      REGISTER_LUMPED_1 (Coupler);
+      REGISTER_LUMPED_1 (Hybrid);
   //}
+
 
   REGISTER_LUMPED_1 (iProbe);
   REGISTER_LUMPED_1 (vProbe);
@@ -295,6 +310,11 @@ void Module::registerModules (void) {
   //}
 
   REGISTER_LUMPED_1 (Relais);
+
+  //if (QucsSettings.DefaultSimulator == spicecompat::simQucsator) {
+      REGISTER_LUMPED_1 (RFedd);
+      REGISTER_LUMPED_1 (RFedd2P);
+  //}
 
   // sources
   REGISTER_SOURCE_1 (Volt_dc);
@@ -350,24 +370,6 @@ void Module::registerModules (void) {
   REGISTER_PROBE_1 (iProbe);
   REGISTER_PROBE_1 (vProbe);
 
-  // RF devices except transmission line
-  REGISTER_RF_COMP_1 (IndQ);
-  REGISTER_RF_COMP_1 (CapQ);
-  REGISTER_RF_COMP_1 (dcBlock);
-  REGISTER_RF_COMP_1 (dcFeed);
-  REGISTER_RF_COMP_1 (circularloop);
-  REGISTER_RF_COMP_1 (spiralinductor);
-  REGISTER_RF_COMP_1 (BiasT);
-  REGISTER_RF_COMP_1 (Attenuator);
-  REGISTER_RF_COMP_1 (Amplifier);
-  REGISTER_RF_COMP_1 (Isolator);
-  REGISTER_RF_COMP_1 (Circulator);
-  REGISTER_RF_COMP_1 (Phaseshifter);
-  REGISTER_RF_COMP_1 (Coupler);
-  REGISTER_RF_COMP_1 (Hybrid);
-  REGISTER_RF_COMP_1 (RFedd);
-  REGISTER_RF_COMP_1 (RFedd2P);
-
   // transmission lines
   //if (QucsSettings.DefaultSimulator == spicecompat::simQucsator) {
       REGISTER_TRANS_1 (TLine);
@@ -414,6 +416,18 @@ void Module::registerModules (void) {
       REGISTER_NONLINEAR_3 (MOSFET, info, info_p, info_depl);
       REGISTER_NONLINEAR_3 (MOSFET_sub, info, info_p, info_depl);
   //} else {
+      REGISTER_NONLINEAR_1 (DIODE_SPICE);
+      REGISTER_NONLINEAR_1 (NPN_SPICE);
+      REGISTER_NONLINEAR_1 (PNP_SPICE);
+      REGISTER_NONLINEAR_2 (BJT_SPICE,infoNPN4,infoPNP4);
+      REGISTER_NONLINEAR_2 (BJT_SPICE,infoNPN5,infoPNP5);
+      REGISTER_NONLINEAR_1 (NJF_SPICE);
+      REGISTER_NONLINEAR_1 (PJF_SPICE);
+      REGISTER_NONLINEAR_1 (NMOS_SPICE);
+      REGISTER_NONLINEAR_1 (PMOS_SPICE);
+      REGISTER_NONLINEAR_2 (MOS_SPICE,info_NM3pin,info_PM3pin);
+      REGISTER_NONLINEAR_2 (MOS_SPICE,info_NX3pin,info_PX3pin);
+      REGISTER_NONLINEAR_2 (MOS_SPICE,info_NX4pin,info_PX4pin);
       REGISTER_NONLINEAR_1 (MESFET_SPICE);
       REGISTER_NONLINEAR_1 (PMF_MESFET_SPICE);
       REGISTER_NONLINEAR_1 (S4Q_Ieqndef);
@@ -422,7 +436,6 @@ void Module::registerModules (void) {
 
   REGISTER_NONLINEAR_1 (OpAmp);
   REGISTER_NONLINEAR_1 (EqnDefined);
-  REGISTER_NONLINEAR_1 (vcresistor);
 
   //if (QucsSettings.DefaultSimulator == spicecompat::simQucsator) {
       REGISTER_NONLINEAR_1 (Diac);
@@ -431,31 +444,17 @@ void Module::registerModules (void) {
       REGISTER_NONLINEAR_1 (TunnelDiode);
   //}
 
-// PDK devices
-      REGISTER_MICROEL_1 (R_SPICE, info_R3);
-      REGISTER_MICROEL_1 (C_SPICE, info_C3);
-      REGISTER_MICROEL_1 (DIODE_SPICE, info);
-      REGISTER_MICROEL_1 (DIODE_SPICE, info_DIODE3);
-      REGISTER_MICROEL_1 (NMOS_SPICE, info);
-      REGISTER_MICROEL_1 (PMOS_SPICE, info);
-      REGISTER_MICROEL_2 (MOS_SPICE,info_NM3pin,info_PM3pin);
-      REGISTER_MICROEL_2 (MOS_SPICE,info_NX3pin,info_PX3pin);
-      REGISTER_MICROEL_2 (MOS_SPICE,info_NX4pin,info_PX4pin);
-      REGISTER_MICROEL_1 (NJF_SPICE, info);
-      REGISTER_MICROEL_1 (PJF_SPICE, info);
-      REGISTER_MICROEL_1 (NPN_SPICE, info);
-      REGISTER_MICROEL_1 (PNP_SPICE, info);
-      REGISTER_MICROEL_2 (BJT_SPICE,infoNPN4,infoPNP4);
-      REGISTER_MICROEL_2 (BJT_SPICE,infoNPN5,infoPNP5);
 
   //if (QucsSettings.DefaultSimulator == spicecompat::simQucsator) {
       // verilog-a devices
       REGISTER_VERILOGA_1 (mod_amp);
       REGISTER_VERILOGA_1 (log_amp);
+      REGISTER_VERILOGA_1 (potentiometer);
       REGISTER_VERILOGA_1 (MESFET);
       REGISTER_VERILOGA_1 (photodiode);
       REGISTER_VERILOGA_1 (phototransistor);
       REGISTER_VERILOGA_1 (nigbt);
+      REGISTER_VERILOGA_1 (vcresistor);
   //}
 
   // digital components
@@ -505,12 +504,21 @@ void Module::registerModules (void) {
   REGISTER_DIGITAL_1 (Verilog_File);
 
   // file components
-  REGISTER_FILE_1 (Subcircuit);
-  REGISTER_FILE_1 (SpiceLibComp);
   REGISTER_FILE_1 (SpiceFile);
-  REGISTER_FILE_3 (SParamFile, info1, info2, info);
-  REGISTER_FILE_1 (SpiceGeneric);
-  REGISTER_FILE_1 (XspiceGeneric);
+  //if (QucsSettings.DefaultSimulator == spicecompat::simQucsator) {
+      REGISTER_FILE_3 (SParamFile, info1, info2, info);
+  //}
+  REGISTER_FILE_1 (Subcircuit);
+  //if (QucsSettings.DefaultSimulator != spicecompat::simQucsator) {
+      REGISTER_FILE_1 (SpiceGeneric);
+      REGISTER_FILE_1 (SpiceLibComp);
+  //}
+
+  //if ((QucsSettings.DefaultSimulator == spicecompat::simNgspice)|| (QucsSettings.DefaultSimulator == spicecompat::simSpiceOpus)) {
+      REGISTER_FILE_1 (XspiceGeneric);
+      //REGISTER_FILE_1 (XSP_CMlib);
+      //REGISTER_FILE_1 (XSP_CodeModel);
+  //}
 
   // simulations
   REGISTER_SIMULATION_1 (DC_Sim);
@@ -557,7 +565,6 @@ void Module::registerModules (void) {
   // equations
   REGISTER_EQUATION_1 (NutmegEquation);
   REGISTER_EQUATION_1 (SpiceParam);
-  REGISTER_EQUATION_1 (SpiceCSParam);
   REGISTER_EQUATION_1 (SpiceGlobalParam);
   REGISTER_EQUATION_1 (Equation);
 
@@ -581,7 +588,6 @@ void Module::registerModules (void) {
 
       // specific sections of spice netlists
       REGISTER_SPICE_SEC_1 (SpiceParam);
-      REGISTER_SPICE_SEC_1 (SpiceCSParam);
       REGISTER_SPICE_SEC_1 (SpiceGlobalParam);
       REGISTER_SPICE_SEC_1 (SpiceOptions);
       REGISTER_SPICE_SEC_1 (SpiceIC);
@@ -619,21 +625,27 @@ void Module::registerModules (void) {
 
 // This function has to be called once at application end.  It removes
 // all categories and registered modules from memory.
-void Module::unregisterModules(void) {
-  while (!Category::Categories.isEmpty()) {
+void Module::unregisterModules (void) {
+  while(!Category::Categories.isEmpty()) {
     delete Category::Categories.takeFirst();
   }
 
-  QHash<QString, Module*>::iterator i = Modules.begin();
-  while (i != Modules.end()) {
-    if (i.value() == 0) { // test here
-      delete i.value();
-      i = Modules.erase(i);
-    } else {
-      ++i;
+    QHash<QString, Module *>::iterator i = Modules.begin();
+    while (i != Modules.end()) {
+        if (i.value() == 0) {         // test here
+            i = Modules.erase(i);
+        } else {
+            ++i;
+        }
     }
-  }
-  Modules.clear();
+
+//remove all modules by iterator, require in qhash
+//  QHashIterator<QString, Module *> it( Modules );
+//  while(it.hasNext()) {
+//    it.next();
+//    delete it.value();
+//  }
+  Modules.clear ();
 }
 
 // Constructor creates instance of module object.

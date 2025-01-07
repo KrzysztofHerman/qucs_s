@@ -45,6 +45,7 @@
 #include "LTL_SPICE.h"
 #include "UDRCTL_SPICE.h"
 #include "LTRA_SPICE.h"
+#include "volt_ac_SPICE.h"
 #include "DIODE_SPICE.h"
 #include "NPN_SPICE.h"
 #include "PNP_SPICE.h"
@@ -57,6 +58,15 @@
 #include "MESFET_SPICE.h"
 #include "PMF_MESFET_SPICE.h"
 
+
+//IHP PDK elements
+
+#include "R_IHP.h"
+#include "C_IHP.h"
+#include "MOS_IHP.h"
+#include "BJT_IHP.h"
+#include "DIODE_IHP.h"
+
 // XSPICE analogue blocks
 #include "Icouple.h"
 #include "core.h"
@@ -64,7 +74,6 @@
 #include "XAPWL.h"
 
 // Spice netlist sections
-#include "sp_csparameter.h"
 #include "sp_parameter.h"
 #include "sp_globalpar.h"
 #include "sp_options.h"
