@@ -1005,6 +1005,17 @@ void QucsApp::slotCallRFLayout()
     connect(this, SIGNAL(signalKillEmAll()), tool, SLOT(kill()));
 }
 
+// ------------------------------------------------------------------------
+// Is called to start the Qucs Mean calculator program.
+void QucsApp::slotCallQucsMean()
+{
+  auto currentStyle = QApplication::style()->objectName();
+  // Assuming qucsmean will be in BinDir (qucs_tool=false by default in launchTool)
+  // If qucsmean is installed elsewhere, this path might need adjustment
+  // or qucsmean needs to be in a standard bin path.
+  launchTool("qucsmean", "Qucs Mean Calculator", (QStringList() << "-style" << currentStyle));
+}
+
 // --------------------------------------------------------------
 void QucsApp::slotHelpIndex()
 {

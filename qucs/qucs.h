@@ -374,7 +374,8 @@ public:
           *distrHor, *distrVert, *selectAll, *callMatch, *changeProps,
           *addToProj, *editFind, *insEntity, *selectMarker,
           *createLib, *callConverter, *graph2csv,
-          *callAtt, *centerHor, *centerVert, *loadModule, *buildModule, *callPwrComb, *callRFLayout, *callSPAR_Viewer;
+          *callAtt, *centerHor, *centerVert, *loadModule, *buildModule, *callPwrComb, *callRFLayout, *callSPAR_Viewer,
+          *callQucsMean;
 
   QAction *helpQucsIndex;
   QAction *simSettings;
@@ -428,6 +429,7 @@ public slots:
   void slotCallPwrComb();
   void slotCallSPAR_Viewer();
   void slotCallRFLayout();
+  void slotCallQucsMean();
   void slotHelpIndex();       // shows a HTML docu: Help Index
   void slotHelpQucsIndex();
   void slotGettingStarted();  // shows a HTML docu: Getting started

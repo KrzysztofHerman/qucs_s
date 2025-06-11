@@ -837,6 +837,7 @@ void QucsApp::initMenuBar()
   toolMenu->addAction(callConverter);
   toolMenu->addAction(callRFLayout);
   toolMenu->addAction(callSPAR_Viewer);
+  toolMenu->addAction(callQucsMean);
   toolMenu->addSeparator();
 
   cmMenu = new QMenu(tr("Compact modelling"));
