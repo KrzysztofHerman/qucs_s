@@ -62,6 +62,7 @@ add_subdirectory( qucs-filter )
 add_subdirectory( library )
 add_subdirectory( qucs-transcalc )
 add_subdirectory( qucs-powercombining )
+add_subdirectory(qucs-touchstone-viewer) # Add this line
 add_subdirectory( qucs-s-spar-viewer )
 #add_subdirectory( examples )
 if(EXISTS ${CMAKE_SOURCE_DIR}/qucsator_rf/CMakeLists.txt)

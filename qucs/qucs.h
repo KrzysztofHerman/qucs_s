@@ -379,6 +379,7 @@ public:
   QAction *helpQucsIndex;
   QAction *simSettings;
   QAction *buildVAModule;
+  QAction *callTouchstoneViewer;
   
 public slots:
   void slotEditRotate(bool);  // rotate the selected items
@@ -454,6 +455,7 @@ private slots:
   void slotClearRecentProjects();
   void slotLoadModule();
   void slotBuildModule();
+  void slotCallTouchstoneViewer();
 
 private:
   void buildWithOpenVAF();

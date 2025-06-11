@@ -565,6 +565,12 @@ void QucsApp::initActions()
   callSPAR_Viewer->setWhatsThis(tr("S-parameter Viewer\n\nStarts S-parameter viewer"));
   connect(callSPAR_Viewer, SIGNAL(triggered()), SLOT(slotCallSPAR_Viewer()));
 
+  callTouchstoneViewer = new QAction(tr("Touchstone Viewer"), this);
+  callTouchstoneViewer->setToolTip(tr("Starts the Touchstone file viewer"));
+  callTouchstoneViewer->setStatusTip(tr("Starts the Touchstone file viewer"));
+  callTouchstoneViewer->setWhatsThis(tr("Touchstone File Viewer\n\nStarts the Touchstone file viewer"));
+  connect(callTouchstoneViewer, SIGNAL(triggered()), SLOT(slotCallTouchstoneViewer()));
+
   callConverter = new QAction(tr("Data files converter"), this);
   callConverter->setShortcut(tr("Ctrl+8"));
   callConverter->setStatusTip(tr("Convert data file"));
@@ -837,6 +843,7 @@ void QucsApp::initMenuBar()
   toolMenu->addAction(callConverter);
   toolMenu->addAction(callRFLayout);
   toolMenu->addAction(callSPAR_Viewer);
+  toolMenu->addAction(callTouchstoneViewer);
   toolMenu->addSeparator();
 
   cmMenu = new QMenu(tr("Compact modelling"));
