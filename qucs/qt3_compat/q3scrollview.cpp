@@ -1502,8 +1502,7 @@ bool Q3ScrollView::eventFilter(QObject *obj, QEvent *e)
             if (disabled)
                 return false;
             if (d->drag_autoscroll) {
-                QPointF vp_f = ((QDragMoveEvent*) e)->position();
-                QPoint vp = vp_f.toPoint();
+                QPoint vp = ((QDragMoveEvent*) e)->position().toPoint();
                 QRect inside_margin(autoscroll_margin, autoscroll_margin,
                                      visibleWidth() - autoscroll_margin * 2,
                                      visibleHeight() - autoscroll_margin * 2);
@@ -1744,7 +1743,7 @@ void Q3ScrollView::viewportResizeEvent(QResizeEvent * /* event */)
 void Q3ScrollView::viewportMousePressEvent(QMouseEvent* e)
 {
     QMouseEvent ce(e->type(), viewportToContents(e->pos()),
-        e->globalPosition().toPoint(), e->button(), e->buttons(), e->modifiers());
+        e->globalPosition(), e->button(), e->buttons(), e->modifiers());
     contentsMousePressEvent(&ce);
     if (!ce.isAccepted())
         e->ignore();
@@ -1761,7 +1760,7 @@ void Q3ScrollView::viewportMousePressEvent(QMouseEvent* e)
 void Q3ScrollView::viewportMouseReleaseEvent(QMouseEvent* e)
 {
     QMouseEvent ce(e->type(), viewportToContents(e->pos()),
-        e->globalPosition().toPoint(), e->button(), e->buttons(), e->modifiers());
+        e->globalPosition(), e->button(), e->buttons(), e->modifiers());
     contentsMouseReleaseEvent(&ce);
     if (!ce.isAccepted())
         e->ignore();
@@ -1778,7 +1777,7 @@ void Q3ScrollView::viewportMouseReleaseEvent(QMouseEvent* e)
 void Q3ScrollView::viewportMouseDoubleClickEvent(QMouseEvent* e)
 {
     QMouseEvent ce(e->type(), viewportToContents(e->pos()),
-        e->globalPosition().toPoint(), e->button(), e->buttons(), e->modifiers());
+        e->globalPosition(), e->button(), e->buttons(), e->modifiers());
     contentsMouseDoubleClickEvent(&ce);
     if (!ce.isAccepted())
         e->ignore();
@@ -1795,7 +1794,7 @@ void Q3ScrollView::viewportMouseDoubleClickEvent(QMouseEvent* e)
 void Q3ScrollView::viewportMouseMoveEvent(QMouseEvent* e)
 {
     QMouseEvent ce(e->type(), viewportToContents(e->pos()),
-        e->globalPosition().toPoint(), e->button(), e->buttons(), e->modifiers());
+        e->globalPosition(), e->button(), e->buttons(), e->modifiers());
     contentsMouseMoveEvent(&ce);
     if (!ce.isAccepted())
         e->ignore();
@@ -1815,7 +1814,7 @@ void Q3ScrollView::viewportDragEnterEvent(QDragEnterEvent* e)
 {
     QDragEnterEvent de(viewportToContents(e->position().toPoint()),
                       e->possibleActions(),e->mimeData(),
-                      e->mouseButtons(),e->keyboardModifiers()); // Qt6 uses mouseButtons() and keyboardModifiers()
+                      e->buttons(),e->modifiers());
     //e->setPoint(viewportToContents(e->pos()));
     contentsDragEnterEvent(&de);
     if (de.isAccepted()) e->accept();
@@ -1835,7 +1834,7 @@ void Q3ScrollView::viewportDragMoveEvent(QDragMoveEvent* e)
 {
     QDragMoveEvent de(viewportToContents(e->position().toPoint()),
                       e->possibleActions(),e->mimeData(),
-                      e->mouseButtons(),e->keyboardModifiers()); // Qt6 uses mouseButtons() and keyboardModifiers()
+                      e->buttons(),e->modifiers());
     //e->setPoint(viewportToContents(e->pos()));
     contentsDragMoveEvent(&de);
     if (de.isAccepted()) e->accept();
@@ -1868,7 +1867,7 @@ void Q3ScrollView::viewportDropEvent(QDropEvent* e)
 {
     QDropEvent de(viewportToContents(e->position().toPoint()),
                       e->possibleActions(),e->mimeData(),
-                      e->mouseButtons(),e->keyboardModifiers()); // Qt6 uses mouseButtons() and keyboardModifiers()
+                      e->buttons(),e->modifiers());
     //e->setPoint(viewportToContents(e->pos()));
     contentsDropEvent(&de);
     if (de.isAccepted()) e->accept();
@@ -1899,12 +1898,11 @@ void Q3ScrollView::viewportWheelEvent(QWheelEvent* e)
        be sent to the focus widget if the widget-under-mouse doesn't want
        the event itself.
     */
-    QPointF globalPosF = e->globalPosition();
-    QPointF viewportPosF = viewport()->mapFromGlobal(globalPosF.toPoint()); // mapFromGlobal expects QPoint
-
-    QWheelEvent ce(viewportPosF, // position
-                   globalPosF,   // globalPosition
-                   e->pixelDelta(), e->angleDelta(),
+    QPoint pe(e->globalPosition().x(),e->globalPosition().y());
+    QPoint pg = viewport()->mapFromGlobal(pe);
+    QPointF pgf(pg.x(),pg.y());
+    QWheelEvent ce(pgf,
+                   e->globalPosition(), e->pixelDelta(), e->angleDelta(),
                    e->buttons(), e->modifiers(), e->phase(), e->inverted());
     contentsWheelEvent(&ce);
     if (ce.isAccepted())

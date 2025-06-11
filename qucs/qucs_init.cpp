@@ -565,6 +565,12 @@ void QucsApp::initActions()
   callSPAR_Viewer->setWhatsThis(tr("S-parameter Viewer\n\nStarts S-parameter viewer"));
   connect(callSPAR_Viewer, SIGNAL(triggered()), SLOT(slotCallSPAR_Viewer()));
 
+  callMean = new QAction(tr("Mean Calculator"), this);
+  callMean->setToolTip(tr("Starts the mean calculator tool"));
+  callMean->setStatusTip(tr("Starts the mean calculator tool"));
+  INIT_ACTION(callMean, "qucs.svg");
+  connect(callMean, SIGNAL(triggered()), SLOT(slotCallMean()));
+
   callConverter = new QAction(tr("Data files converter"), this);
   callConverter->setShortcut(tr("Ctrl+8"));
   callConverter->setStatusTip(tr("Convert data file"));
@@ -837,7 +843,7 @@ void QucsApp::initMenuBar()
   toolMenu->addAction(callConverter);
   toolMenu->addAction(callRFLayout);
   toolMenu->addAction(callSPAR_Viewer);
-  toolMenu->addAction(callQucsMean);
+  toolMenu->addAction(callMean);
   toolMenu->addSeparator();
 
   cmMenu = new QMenu(tr("Compact modelling"));

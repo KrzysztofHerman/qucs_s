@@ -1,10 +1,10 @@
 #include <QApplication>
-#include "meanwindow.h"
+#include "qucsmeanwindow.h"
 
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    MeanWindow window;
+    QucsMeanWindow window;
     window.show();
     return app.exec();
 }

@@ -309,6 +309,7 @@ public:
    ************************************************** */
 
 public slots:
+  void slotCallMean();
   void slotShowWarnings();
   void slotResetWarnings();
   void printCursorPosition(int, int, QString);
@@ -374,8 +375,7 @@ public:
           *distrHor, *distrVert, *selectAll, *callMatch, *changeProps,
           *addToProj, *editFind, *insEntity, *selectMarker,
           *createLib, *callConverter, *graph2csv,
-          *callAtt, *centerHor, *centerVert, *loadModule, *buildModule, *callPwrComb, *callRFLayout, *callSPAR_Viewer,
-          *callQucsMean;
+          *callAtt, *centerHor, *centerVert, *loadModule, *buildModule, *callPwrComb, *callRFLayout, *callSPAR_Viewer, *callMean;
 
   QAction *helpQucsIndex;
   QAction *simSettings;
@@ -429,7 +429,6 @@ public slots:
   void slotCallPwrComb();
   void slotCallSPAR_Viewer();
   void slotCallRFLayout();
-  void slotCallQucsMean();
   void slotHelpIndex();       // shows a HTML docu: Help Index
   void slotHelpQucsIndex();
   void slotGettingStarted();  // shows a HTML docu: Getting started
