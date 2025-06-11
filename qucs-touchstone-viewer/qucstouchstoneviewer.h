@@ -15,6 +15,8 @@
 #include <QRegularExpression>
 #include <cmath> // For fmod, sqrt, pow, log10, cos, sin, atan2
 #include <limits> // Required for std::numeric_limits
+#include <QTextEdit> // For log display
+#include <QBuffer>   // For handling string as I/O device
 
 // Assuming tQucsSettings is defined elsewhere and accessible
 struct tQucsSettings {
@@ -44,6 +46,19 @@ private:
 
     QPushButton *openButton;
     QTableWidget *dataTable;
+    QPushButton *loadInternalDataButton;
+    QTextEdit *logOutputArea;
+
+    // Static member to hold the instance of the log area for the message handler
+    static QTextEdit* S_logOutputArea;
+
+private slots:
+    // ... existing openFile slot ...
+    void loadInternalTestData();
+    void handleLogMessage(const QString& message); // Slot to append messages to logOutputArea
+
+public: // Or private, depending on where qInstallMessageHandler is called
+    static void qtMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg);
 };
 
 #endif // QUCSOUCHSTONEVIEWER_H
