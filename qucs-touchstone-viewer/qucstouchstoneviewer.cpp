@@ -22,19 +22,14 @@ QucsTouchstoneViewer::QucsTouchstoneViewer(QWidget *parent)
 
 QucsTouchstoneViewer::~QucsTouchstoneViewer()
 {
-    // It's good practice to uninstall the message handler if the object providing the log area is destroyed
-    // to prevent calls to a dangling S_logOutputArea.
-    // However, since QucsTouchstoneViewer is the main window, it's likely S_logOutputArea
-    // will be valid for the application's lifetime. If not, more careful handling is needed.
-    // qInstallMessageHandler(nullptr); // Or restore previous handler if saved.
+    // qInstallMessageHandler(nullptr); // Optional: uninstall handler
 }
 
 void QucsTouchstoneViewer::createWidgets()
 {
     QWidget *centralWidget = new QWidget(this);
-    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget); // Renamed to mainLayout
+    QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
 
-    // Top part for buttons and table
     QWidget *topWidget = new QWidget();
     QHBoxLayout *topLayout = new QHBoxLayout(topWidget);
 
@@ -53,30 +48,27 @@ void QucsTouchstoneViewer::createWidgets()
     dataTable->setHorizontalHeaderLabels(headers);
     dataTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
 
-    // Log area at the bottom
     logOutputArea = new QTextEdit(this);
     logOutputArea->setReadOnly(true);
-    logOutputArea->setFontFamily("monospace"); // Good for logs
-    logOutputArea->setMinimumHeight(150); // Give it some initial height
+    logOutputArea->setFontFamily("monospace");
+    logOutputArea->setMinimumHeight(150);
 
-    // Add widgets to main layout
     mainLayout->addWidget(topWidget);
-    mainLayout->addWidget(dataTable, 1); // Give table more stretch factor
-    mainLayout->addWidget(logOutputArea, 0); // Log area takes remaining space initially
+    mainLayout->addWidget(dataTable, 1);
+    mainLayout->addWidget(logOutputArea, 0);
 
     setCentralWidget(centralWidget);
 }
 
 void QucsTouchstoneViewer::openFile()
 {
-    if (logOutputArea) { // Ensure logOutputArea is valid
-        logOutputArea->clear(); // Clear previous logs
+    if (logOutputArea) {
+        logOutputArea->clear();
     }
     QString filePath = QFileDialog::getOpenFileName(this, tr("Open Touchstone File"),
                                                     "", tr("Touchstone files (*.s*p);;All files (*.*)"));
     if (!filePath.isEmpty()) {
         QMap<QString, QList<double>> data = readTouchstoneFile(filePath);
-        // Check data validity more thoroughly before calling displayData
         if (!data.isEmpty() && data.contains("frequency") && !data["frequency"].isEmpty() && data["frequency"].size() > 0) {
             displayData(data);
         } else {
@@ -86,7 +78,6 @@ void QucsTouchstoneViewer::openFile()
     }
 }
 
-// Custom Qt Message Handler
 void QucsTouchstoneViewer::qtMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg)
 {
     QString txt;
@@ -112,7 +103,6 @@ void QucsTouchstoneViewer::qtMessageHandler(QtMsgType type, const QMessageLogCon
          QMetaObject::invokeMethod(S_logOutputArea, "append", Qt::QueuedConnection, Q_ARG(QString, txt));
     }
 
-    // Also print to console (stderr for warnings/errors, stdout for debug/info)
     if (type == QtWarningMsg || type == QtCriticalMsg || type == QtFatalMsg) {
         fprintf(stderr, "%s\n", msg.toLocal8Bit().constData());
     } else {
@@ -120,66 +110,63 @@ void QucsTouchstoneViewer::qtMessageHandler(QtMsgType type, const QMessageLogCon
     }
 
     if (type == QtFatalMsg) {
-        abort(); // For fatal errors, abort as Qt's default handler would.
+        abort();
     }
 }
 
 void QucsTouchstoneViewer::loadInternalTestData() {
-    if (logOutputArea) {
-        logOutputArea->clear(); // Clear previous logs
+    if(logOutputArea) {
+        logOutputArea->clear();
     }
-    qDebug() << "Loading internal test data...";
+    qDebug() << "Loading internal S1P test data...";
     QString internalData =
         "# HZ S RI R 50\n"
-        "1.00000000000000000000e+09 -9.80710605771547339060e-01 +1.95465355819101765933e-01 +9.57923040231001455972e-06 +4.80619842391346986199e-05 +9.57923040231001455972e-06 +4.80619842391346986199e-05 -9.80710605771547339060e-01 +1.95465355819101765933e-01\n"
-        "1.04500000000000000000e+09 -9.78880267386821323328e-01 +2.04434386424487635203e-01 +1.25489219116246239109e-05 +6.00872106259126012649e-05 +1.25489219116246239109e-05 +6.00872106259126012649e-05 -9.78880267386821323328e-01 +2.04434386424487635203e-01\n"
-        "1.09000000000000000000e+09 -9.76959039486574365441e-01 +2.13426871222935438110e-01 +1.62617526123439660383e-05 +7.44379848774005868726e-05 +1.62617526123439660383e-05 +7.44379848774005868726e-05 -9.76959039486574365441e-01 +2.13426871222935438110e-01\n"
-        "1.13500000000000000000e+09 -9.74945474762582309225e-01 +2.22443953485435913509e-01 +2.08644033683502456034e-05 +9.14462062414572263245e-05 +2.08644033683502456034e-05 +9.14462062414572263245e-05 -9.74945474762582309225e-01 +2.22443953485435941264e-01\n"
-        "1.18000000000000000000e+09 -9.72838039368598250789e-01 +2.31486794497696934947e-01 +2.65258441025909904459e-05 +1.11476554096129074696e-04 +2.65258441025909904459e-05 +1.11476554096129074696e-04 -9.72838039368598250789e-01 +2.31486794497696934947e-01\n"
-        "1.22500000000000000000e+09 -9.70635109149991071043e-01 +2.40556574554572549784e-01 +3.34399207454875673873e-05 +1.34928597078936565127e-04 +3.34399207454875673873e-05 +1.34928597078936565127e-04 -9.70635109149990960020e-01 +2.40556574554572522029e-01\n"
-        "1.27000000000000000000e+09 -9.68334965577859474450e-01 +2.49654493987659570342e-01 +4.18281876468712198553e-05 +1.62239004787232164251e-04 +4.18281876468712198553e-05 +1.62239004787232164251e-04 -9.68334965577859474450e-01 +2.49654493987659542586e-01\n"
-        "1.31500000000000000000e+09 -9.65935791364279427995e-01 +2.58781774227693439627e-01 +5.19430088755720511542e-05 +1.93883868111675671106e-04 +5.19430088755720511542e-05 +1.93883868111675671106e-04 -9.65935791364279539017e-01 +2.58781774227693439627e-01\n"
-        "1.36000000000000000000e+09 -9.63435665732913504300e-01 +2.67939658903311672677e-01 +6.40709543671961394371e-05 +2.30381134422425382004e-04 +6.40709543671961394371e-05 +2.30381134422425382004e-04 -9.63435665732913504300e-01 +2.67939658903311728189e-01\n"
-        "1.40500000000000000000e+09 -9.60832559316443512998e-01 +2.77129414977661359121e-01 +7.85365197085371324502e-05 +2.72293163962556209173e-04 +7.85365197085371324502e-05 +2.72293163962556209173e-04 -9.60832559316443512998e-01 +2.77129414977661359121e-01\n"
-        "1.45000000000000000000e+09 -9.58124328649269108027e-01 +2.86352333924192958836e-01 +9.57062015038469146794e-05 +3.20229413906998031016e-04 +9.57062015038469146794e-05 +3.20229413906998031016e-04 -9.58124328649269108027e-01 +2.86352333924192958836e-01\n"
-        "1.49500000000000000000e+09 -9.55308710220502232957e-01 +2.95609732942789416033e-01 +1.15992963796950055138e-04 +3.74849256607401738316e-04 +1.15992963796950055138e-04 +3.74849256607401738316e-04 -9.55308710220502121935e-01 +2.95609732942789416033e-01\n"
-        "1.54000000000000000000e+09 -9.52383314048469875601e-01 +3.04902956217125431504e-01 +1.39861134972628256383e-04 +4.36864938550998878862e-04 +1.39861134972628256383e-04 +4.36864938550998878862e-04 -9.52383314048469875601e-01 +3.04902956217125431504e-01\n"
-        "1.58500000000000000000e+09 -9.49345616733679342758e-01 +3.14233376213810311484e-01 +1.67831778986878379402e-04 +5.07044686498861561091e-04 +1.67831778986878379402e-04 +5.07044686498861561091e-04 -9.49345616733679342758e-01 +3.14233376213810255972e-01\n"
-        "1.63000000000000000000e+09 -9.46192953942413650381e-01 +3.23602395023421252063e-01 +2.00488589742236187913e-04 +5.86215967116756535120e-04 +2.00488589742236187913e-04 +5.86215967116756535120e-04 -9.46192953942413650381e-01 +3.23602395023421252063e-01\n"
-        "1.67500000000000000000e+09 -9.42922512267730161817e-01 +3.33011445742972866935e-01 +2.38484363004810688298e-04 +6.75268906146331390934e-04 +2.38484363004810688298e-04 +6.75268906146331390934e-04 -9.42922512267730161817e-01 +3.33011445742972866935e-01\n"
-        "1.72000000000000000000e+09 -9.39531320408591552606e-01 +3.42461993898632133249e-01 +2.82548106537879734068e-04 +7.75159872756728848646e-04 +2.82548106537879734068e-04 +7.75159872756728848646e-04 -9.39531320408591552606e-01 +3.42461993898632188760e-01\n"
-        "1.76500000000000000000e+09 -9.36016239601031974082e-01 +3.51955538906586373749e-01 +3.33492856199082510302e-04 +8.86915234131667451489e-04 +3.33492856199082510302e-04 +8.86915234131667451489e-04 -9.36016239601031863060e-01 +3.51955538906586373749e-01\n"
-        "1.81000000000000000000e+09 -9.32373953227547569433e-01 +3.61493615568802439952e-01 +3.92224273725990107021e-04 +1.01163528454101584418e-03 +3.92224273725990107021e-04 +1.01163528454101584418e-03 -9.32373953227547569433e-01 +3.61493615568802495464e-01\n";
+        "1.00000000000000000000e+09 -8.46515980894904096488e-01 +3.82129464747608060815e-01\n"
+        "1.04500000000000000000e+09 +7.66950422926827468650e-01 +5.06598385795697825351e-01\n"
+        "1.09000000000000000000e+09 -7.40092995892248639578e-02 -9.18543147793533520939e-01\n"
+        "1.13500000000000000000e+09 -7.84313619526967986673e-01 +4.87399953901208826679e-01\n"
+        "1.18000000000000000000e+09 +8.27597192619389798729e-01 +3.86355153329461353806e-01\n"
+        "1.22500000000000000000e+09 -1.98965544753984008297e-01 -8.95226442863656934890e-01\n"
+        "1.27000000000000000000e+09 -7.08973922134685685670e-01 +5.83501861798306320495e-01\n"
+        "1.31500000000000000000e+09 +8.70128641781341860550e-01 +2.58949445769425745656e-01\n"
+        "1.36000000000000000000e+09 -3.18042669221875073937e-01 -8.55715355687028722542e-01\n"
+        "1.40500000000000000000e+09 -6.21653232228549512683e-01 +6.68814615271009271780e-01\n"
+        "1.45000000000000000000e+09 +8.93654065574718714515e-01 +1.27182133467183100528e-01\n"
+        "1.49500000000000000000e+09 -4.29312049976689813491e-01 -8.01204252693833773868e-01\n"
+        "1.54000000000000000000e+09 -5.23720562306002390685e-01 +7.41826867193043137938e-01\n"
+        "1.58500000000000000000e+09 +8.97757786263793877701e-01 -6.01937001568708836274e-03\n"
+        "1.63000000000000000000e+09 -5.31064362360373354299e-01 -7.33080849935221268154e-01\n"
+        "1.67500000000000000000e+09 -4.16754460109290847392e-01 +8.01166944135256797743e-01\n"
+        "1.72000000000000000000e+09 +8.82516757194892864646e-01 -1.37695855400943534264e-01\n"
+        "1.76500000000000000000e+09 -6.21818176421991219982e-01 -6.52887024248738345733e-01\n"
+        "1.81000000000000000000e+09 -3.02536121210643660362e-01 +8.45636179240584429095e-01\n";
 
-    QTemporaryFile tempFile("test_internal_XXXXXX.s2p");
+    QTemporaryFile tempFile("test_internal_s1p_XXXXXX.s1p");
     if (tempFile.open()) {
         QTextStream out(&tempFile);
-        out << internalData.replace("\n", "\n"); // Ensure newlines are correct for file
+        out << internalData; // C++ string newlines are handled correctly by QTextStream
         tempFile.close();
-        qDebug() << "Temporary internal test file created at:" << tempFile.fileName();
+        qDebug() << "Temporary internal S1P test file created at:" << tempFile.fileName();
 
         QMap<QString, QList<double>> data = readTouchstoneFile(tempFile.fileName());
         if (!data.isEmpty() && data.contains("frequency") && !data["frequency"].isEmpty() && data["frequency"].size() > 0) {
             displayData(data);
         } else {
-            qWarning() << "Could not read or parse valid data from the internal test data.";
-             QMessageBox::warning(this, tr("Internal Test Error"), tr("Could not read or parse valid data from the internal test data. Check logs."));
+            qWarning() << "Could not read or parse valid data from the internal S1P test data.";
+            QMessageBox::warning(this, tr("Internal S1P Test Error"), tr("Could not read or parse valid data from the internal S1P test data. Check logs."));
         }
     } else {
-        qWarning() << "Could not create temporary file for internal test data.";
-        QMessageBox::critical(this, tr("Internal Test Error"), tr("Could not create temporary file for internal test data."));
+        qWarning() << "Could not create temporary file for internal S1P test data.";
+        QMessageBox::critical(this, tr("Internal S1P Test Error"), tr("Could not create temporary file for internal S1P test data."));
     }
 }
 
-// Slot to append messages to logOutputArea (can be used if message handler emits a signal)
 void QucsTouchstoneViewer::handleLogMessage(const QString& message) {
     if (logOutputArea) {
         logOutputArea->append(message);
     }
 }
 
-
-// Convert S-parameter from Magnitude/Angle (MA), Real/Imaginary (RI) or dB/Angle (DB) to dB/Angle and Real/Imaginary
 void QucsTouchstoneViewer::convert_MA_RI_to_dB(double *S_val1, double *S_val2, double *S_re_out, double *S_im_out, QString format)
 {
     double input_val1 = *S_val1;
@@ -188,7 +175,7 @@ void QucsTouchstoneViewer::convert_MA_RI_to_dB(double *S_val1, double *S_val2, d
 
     format = format.toUpper();
 
-    if (format == "MA") { // Magnitude (linear) and Angle (degrees)
+    if (format == "MA") {
         if (input_val1 < 0) {
             qWarning() << "Magnitude (MA) is negative:" << input_val1 << ". Using abs().";
             input_val1 = std::abs(input_val1);
@@ -198,20 +185,20 @@ void QucsTouchstoneViewer::convert_MA_RI_to_dB(double *S_val1, double *S_val2, d
         double ang_rad = qDegreesToRadians(s_ang_deg);
         s_re = input_val1 * std::cos(ang_rad);
         s_im = input_val1 * std::sin(ang_rad);
-    } else if (format == "RI") { // Real and Imaginary
+    } else if (format == "RI") {
         s_re = input_val1;
         s_im = input_val2;
         double mag = std::sqrt(s_re * s_re + s_im * s_im);
         s_db = 20.0 * log10(mag > std::numeric_limits<double>::epsilon() ? mag : std::numeric_limits<double>::min());
         s_ang_deg = qRadiansToDegrees(std::atan2(s_im, s_re));
-    } else if (format == "DB") { // dB and Angle (degrees)
+    } else if (format == "DB") {
         s_db = input_val1;
         s_ang_deg = input_val2;
         double mag_lin = std::pow(10.0, s_db / 20.0);
         double ang_rad = qDegreesToRadians(s_ang_deg);
         s_re = mag_lin * std::cos(ang_rad);
         s_im = mag_lin * std::sin(ang_rad);
-    } else { // Default or unknown format, assume MA
+    } else {
         qWarning() << "Unknown S-parameter format specified in file: '" << format << "'. Assuming MA.";
         if (input_val1 < 0) {
              qWarning() << "Magnitude (MA assumed) is negative:" << input_val1 << ". Using abs().";
@@ -240,7 +227,7 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
 
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "Error: Cannot open the file:" << filePath; // Changed to qWarning for handler
+        qWarning() << "Error: Cannot open the file:" << filePath;
         return file_data;
     }
 
@@ -253,10 +240,14 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
     QString suffix = fileInfo.suffix().toLower();
     if (suffix.startsWith('s') && suffix.endsWith('p')) {
         bool ok;
-        int n = suffix.mid(1, suffix.length() - 2).toInt(&ok);
+        // Correctly extract N from sNp, e.g. s2p -> 2, s12p -> 12
+        QString n_str = suffix.mid(1, suffix.length() - (suffix.endsWith("p") ? 2 : 1) );
+        int n = n_str.toInt(&ok);
         if (ok && n > 0) {
             number_of_ports = n;
-            qDebug() << "Number of ports from extension:" << number_of_ports;
+            qDebug() << "Number of ports from extension (" << suffix << "):" << number_of_ports;
+        } else {
+            qWarning() << "Could not parse N from file extension:" << suffix;
         }
     }
 
@@ -277,7 +268,7 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
                  continue;
             }
             options_line_parsed = true;
-            QStringList parts = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts); // Escaped \s
+            QStringList parts = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
 
             if (parts.length() > 1) frequency_unit_str = parts[1].toLower();
             if (parts.length() > 2) parameter_str = parts[2].toLower();
@@ -287,9 +278,9 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
             for(int k=4; k < parts.length(); ++k) {
                 if(parts[k].toLower() == "r" || parts[k].toLower() == "z0") {
                     if (k+1 < parts.length()) {
-                        bool ok;
-                        double parsed_Z0 = parts[k+1].toDouble(&ok);
-                        if(ok) {
+                        bool ok_z0;
+                        double parsed_Z0 = parts[k+1].toDouble(&ok_z0);
+                        if(ok_z0) {
                             Z0 = parsed_Z0;
                             z0_found_keyword = true;
                         } else {
@@ -301,10 +292,10 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
             }
             if (!z0_found_keyword && parts.length() >= 5) {
                 QString potential_z0_str = parts[4].toLower();
-                if (potential_z0_str != "r" && potential_z0_str != "z0") {
-                    bool ok;
-                    double z_check = parts[4].toDouble(&ok);
-                    if (ok) Z0 = z_check;
+                if (potential_z0_str != "r" && potential_z0_str != "z0") { // ensure it's not a keyword
+                    bool ok_z0_fallback;
+                    double z_check = parts[4].toDouble(&ok_z0_fallback);
+                    if (ok_z0_fallback) Z0 = z_check;
                 }
             }
 
@@ -344,7 +335,7 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
             }
         }
 
-        QStringList values = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts); // Escaped \s
+        QStringList values = line.split(QRegularExpression("\\s+"), Qt::SkipEmptyParts);
         if (values.isEmpty()) {
             qDebug() << "Skipping line that resulted in empty values list after split.";
             continue;
@@ -361,10 +352,15 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
                         number_of_ports = static_cast<int>(n_double);
                         qDebug() << "Number of ports determined from first data line:" << number_of_ports;
                     }
+                } else if (parameter_str.toUpper() == "S" && s_param_data_count > 0 && (s_param_data_count +1) % 2 != 0 && number_of_ports == 0) {
+                    // Special case for 1-port S-parameters (e.g. S11 only, freq + 2 values)
+                    // If total values = 3 (freq, S11mag, S11ang), then s_param_data_count = 2. n_squared = 1. n_double = 1.
+                    // This is already covered by the above.
+                    // What if it's Y or Z parameters? Parser currently only handles S.
                 }
             }
             if (number_of_ports == 0) {
-                qWarning() << "Error: Could not determine number of ports for file:" << filePath << ". File extension was not sNp or first data line malformed. Line:" << line;
+                qWarning() << "Error: Could not determine number of ports for file:" << filePath << ". File extension was not sNp or first data line malformed/non-S type. Line:" << line;
                 file.close();
                 return QMap<QString, QList<double>>();
             }
@@ -389,12 +385,12 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
         int current_val_idx = 1;
         int expected_s_param_pairs = number_of_ports * number_of_ports;
 
-        for (int i = 1; i <= number_of_ports; ++i) {
-            for (int j = 1; j <= number_of_ports; ++j) {
-                QString s_param_mag_key = QString("S%1%2_dB").arg(i).arg(j);
-                QString s_param_ang_key = QString("S%1%2_ang").arg(i).arg(j);
-                QString s_param_re_key = QString("S%1%2_re").arg(i).arg(j);
-                QString s_param_im_key = QString("S%1%2_im").arg(i).arg(j);
+        for (int i_port = 1; i_port <= number_of_ports; ++i_port) { // Renamed i to i_port
+            for (int j_port = 1; j_port <= number_of_ports; ++j_port) { // Renamed j to j_port
+                QString s_param_mag_key = QString("S%1%2_dB").arg(i_port).arg(j_port);
+                QString s_param_ang_key = QString("S%1%2_ang").arg(i_port).arg(j_port);
+                QString s_param_re_key = QString("S%1%2_re").arg(i_port).arg(j_port);
+                QString s_param_im_key = QString("S%1%2_im").arg(i_port).arg(j_port);
 
                 if (current_val_idx + 1 < values.length()) {
                     bool val1_ok, val2_ok;
@@ -408,17 +404,17 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
                         file_data[s_param_re_key].append(std::numeric_limits<double>::quiet_NaN());
                         file_data[s_param_im_key].append(std::numeric_limits<double>::quiet_NaN());
                     } else {
-                        double s_re_val, s_im_val; // Renamed to avoid conflict with s_re, s_im in outer scope
+                        double s_re_val, s_im_val;
                         convert_MA_RI_to_dB(&val1, &val2, &s_re_val, &s_im_val, format_str);
                         file_data[s_param_mag_key].append(val1);
                         file_data[s_param_ang_key].append(val2);
                         file_data[s_param_re_key].append(s_re_val);
                         file_data[s_param_im_key].append(s_im_val);
-                        qDebug() << QString("S%1%2: dB=").arg(i).arg(j) << val1 << "Ang=" << val2 << "Re=" << s_re_val << "Im=" << s_im_val;
+                        qDebug() << QString("S%1%2: dB=").arg(i_port).arg(j_port) << val1 << "Ang=" << val2 << "Re=" << s_re_val << "Im=" << s_im_val;
                     }
                     current_val_idx += 2;
                 } else {
-                    qDebug() << "Incomplete data on line for S" << i << j << " - Appending NaN. Line:" << line;
+                    qDebug() << "Incomplete data on line for S" << i_port << j_port << " - Appending NaN. Line:" << line;
                     file_data[s_param_mag_key].append(std::numeric_limits<double>::quiet_NaN());
                     file_data[s_param_ang_key].append(std::numeric_limits<double>::quiet_NaN());
                     file_data[s_param_re_key].append(std::numeric_limits<double>::quiet_NaN());
@@ -455,11 +451,13 @@ void QucsTouchstoneViewer::displayData(const QMap<QString, QList<double>>& data)
 
     if (!data.contains("frequency") || data["frequency"].isEmpty()) {
         dataTable->setRowCount(0);
+        // Message box logic from your previous version
         if (data.isEmpty()) {
+            // Message may have been shown by openFile if readTouchstoneFile returned empty
         } else {
-             if (!(data.contains("frequency") && !data["frequency"].isEmpty())) {
+             if (!(data.contains("frequency") && !data["frequency"].isEmpty())) { // Check specifically if frequency is the issue
                  QMessageBox::information(this, tr("Info"), tr("File parsed, but no valid frequency data points found."));
-            } else {
+            } else { // This case should ideally not be reached if the outer condition is true
                  QMessageBox::information(this, tr("Info"), tr("No frequency data points found in the file."));
             }
         }
@@ -471,14 +469,33 @@ void QucsTouchstoneViewer::displayData(const QMap<QString, QList<double>>& data)
     dataTable->setRowCount(numRowsToShow);
     qDebug() << "Displaying" << numRowsToShow << "rows.";
 
-    QStringList sParamIndices = {"11", "12", "21", "22"};
+    int number_of_ports = 0;
+    if (data.contains("n_ports") && !data["n_ports"].isEmpty()) {
+        number_of_ports = static_cast<int>(data["n_ports"].first());
+    }
+    qDebug() << "Displaying data for" << number_of_ports << "-port file.";
+
+    QStringList sParamTableColumns = {"11", "12", "21", "22"}; // Corresponds to table columns 1, 2, 3, 4
 
     for (int i = 0; i < numRowsToShow; ++i) {
+        // Frequency - Column 0
         dataTable->setItem(i, 0, new QTableWidgetItem(QString::number(freq.at(i), 'g', 10)));
 
-        for (int j = 0; j < sParamIndices.size(); ++j) {
-            QString s_param_key_db = QString("S%1_dB").arg(sParamIndices.at(j));
-            if (data.contains(s_param_key_db) && i < data[s_param_key_db].size()) {
+        // S-parameters - Columns 1 to 4
+        for (int j = 0; j < sParamTableColumns.size(); ++j) {
+            QString current_s_param_index = sParamTableColumns.at(j);
+            QString s_param_key_db = QString("S%1_dB").arg(current_s_param_index);
+
+            bool should_display_sparam = false;
+            if (number_of_ports == 1) {
+                if (current_s_param_index == "11") {
+                    should_display_sparam = true;
+                }
+            } else if (number_of_ports >= 2) {
+                should_display_sparam = true;
+            }
+
+            if (should_display_sparam && data.contains(s_param_key_db) && i < data[s_param_key_db].size()) {
                 double val = data[s_param_key_db].at(i);
                 dataTable->setItem(i, j + 1, new QTableWidgetItem(std::isnan(val) ? "NaN" : QString::number(val, 'f', 4)));
             } else {
@@ -486,6 +503,7 @@ void QucsTouchstoneViewer::displayData(const QMap<QString, QList<double>>& data)
             }
         }
 
+        // Z0 - Column 5
         if (data.contains("Z0") && i < data["Z0"].size()) {
              dataTable->setItem(i, 5, new QTableWidgetItem(QString::number(data["Z0"].at(i), 'f', 2)));
         } else if (data.contains("Z0") && !data["Z0"].isEmpty()){
