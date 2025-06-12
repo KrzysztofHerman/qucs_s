@@ -2,19 +2,23 @@
 #include <QHeaderView> // Required for QHeaderView
 #include <QtMath> // For qDegreesToRadians and qRadiansToDegrees if needed, M_PI is in cmath
 #include <QTemporaryFile> // Required for QTemporaryFile
+#include <QLabel> // Required for QLabel (used in createWidgets)
+#include <QClipboard> // For accessing the system clipboard
+#include <QApplication> // Required for QApplication::clipboard()
+#include <QMessageBox> // Already implicitly included by QFileDialog, but good to be explicit
+
+// QTextEdit, QComboBox etc. are included via qucstouchstoneviewer.h -> QMainWindow -> QtWidgets
 
 QTextEdit* QucsTouchstoneViewer::S_logOutputArea = nullptr;
 
 QucsTouchstoneViewer::QucsTouchstoneViewer(QWidget *parent)
     : QMainWindow(parent)
 {
-    createWidgets(); // This will now also create logOutputArea and loadInternalDataButton
+    createWidgets();
     setWindowTitle(tr("Qucs Touchstone Viewer"));
-    setMinimumSize(800, 600); // Increased size for log area
+    setMinimumSize(800, 600);
 
-    // Set the static pointer for the message handler
     S_logOutputArea = logOutputArea;
-    // Install the custom message handler
     qInstallMessageHandler(qtMessageHandler);
 
     qDebug() << "Touchstone Viewer initialized. Logging started.";
@@ -22,7 +26,7 @@ QucsTouchstoneViewer::QucsTouchstoneViewer(QWidget *parent)
 
 QucsTouchstoneViewer::~QucsTouchstoneViewer()
 {
-    // qInstallMessageHandler(nullptr); // Optional: uninstall handler
+    // qInstallMessageHandler(nullptr);
 }
 
 void QucsTouchstoneViewer::createWidgets()
@@ -30,8 +34,8 @@ void QucsTouchstoneViewer::createWidgets()
     QWidget *centralWidget = new QWidget(this);
     QVBoxLayout *mainLayout = new QVBoxLayout(centralWidget);
 
-    QWidget *topWidget = new QWidget();
-    QHBoxLayout *topLayout = new QHBoxLayout(topWidget);
+    QWidget *controlsWidget = new QWidget();
+    QGridLayout *controlsLayout = new QGridLayout(controlsWidget);
 
     openButton = new QPushButton(tr("Select Touchstone File"), this);
     connect(openButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::openFile);
@@ -39,8 +43,19 @@ void QucsTouchstoneViewer::createWidgets()
     loadInternalDataButton = new QPushButton(tr("Load Internal Test Data"), this);
     connect(loadInternalDataButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::loadInternalTestData);
 
-    topLayout->addWidget(openButton);
-    topLayout->addWidget(loadInternalDataButton);
+    controlsLayout->addWidget(openButton, 0, 0);
+    controlsLayout->addWidget(loadInternalDataButton, 0, 1);
+
+    QLabel *networkTypeLabel = new QLabel(tr("Network Type:"), this);
+    networkTypeComboBox = new QComboBox(this);
+    networkTypeComboBox->addItem(tr("Inductor-pi"));
+
+    synthesizeButton = new QPushButton(tr("Synthesize"), this);
+    connect(synthesizeButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::onSynthesizeClicked);
+
+    controlsLayout->addWidget(networkTypeLabel, 1, 0);
+    controlsLayout->addWidget(networkTypeComboBox, 1, 1);
+    controlsLayout->addWidget(synthesizeButton, 1, 2);
 
     dataTable = new QTableWidget(this);
     dataTable->setColumnCount(6);
@@ -53,7 +68,7 @@ void QucsTouchstoneViewer::createWidgets()
     logOutputArea->setFontFamily("monospace");
     logOutputArea->setMinimumHeight(150);
 
-    mainLayout->addWidget(topWidget);
+    mainLayout->addWidget(controlsWidget);
     mainLayout->addWidget(dataTable, 1);
     mainLayout->addWidget(logOutputArea, 0);
 
@@ -144,7 +159,7 @@ void QucsTouchstoneViewer::loadInternalTestData() {
     QTemporaryFile tempFile("test_internal_s1p_XXXXXX.s1p");
     if (tempFile.open()) {
         QTextStream out(&tempFile);
-        out << internalData; // C++ string newlines are handled correctly by QTextStream
+        out << internalData;
         tempFile.close();
         qDebug() << "Temporary internal S1P test file created at:" << tempFile.fileName();
 
@@ -158,6 +173,82 @@ void QucsTouchstoneViewer::loadInternalTestData() {
     } else {
         qWarning() << "Could not create temporary file for internal S1P test data.";
         QMessageBox::critical(this, tr("Internal S1P Test Error"), tr("Could not create temporary file for internal S1P test data."));
+    }
+}
+
+void QucsTouchstoneViewer::onSynthesizeClicked()
+{
+    QString selectedNetwork = networkTypeComboBox->currentText();
+    qDebug() << "Synthesize button clicked for network type:" << selectedNetwork;
+
+    if (selectedNetwork == tr("Inductor-pi")) { // Use tr() for future localization
+        logOutputArea->append("Synthesizing Inductor-pi network...");
+
+        // Define value ranges
+        // Resistors: 1 Ohm to 100 kOhm (1e0 to 1e5 Ohms)
+        // Inductors: 1 nH to 100 mH (1e-9 to 1e-1 Henries)
+        // Capacitors: 1 pF to 10 uF (1e-12 to 1e-5 Farads)
+
+        QString rShunt1Val = generateFormattedRandomValue(1.0, 100e3, "R");
+        QString cShunt1Val = generateFormattedRandomValue(1e-12, 10e-6, "C");
+        QString lSeriesVal = generateFormattedRandomValue(1e-9, 100e-3, "L");
+        QString rSeriesVal = generateFormattedRandomValue(1.0, 100e3, "R");
+        QString cShunt2Val = generateFormattedRandomValue(1e-12, 10e-6, "C");
+        QString rShunt2Val = generateFormattedRandomValue(1.0, 100e3, "R");
+
+        logOutputArea->append(QString("Generated values:"));
+        logOutputArea->append(QString("  Rshunt1: %1").arg(rShunt1Val));
+        logOutputArea->append(QString("  Cshunt1: %1").arg(cShunt1Val));
+        logOutputArea->append(QString("  Lseries: %1").arg(lSeriesVal));
+        logOutputArea->append(QString("  Rseries: %1").arg(rSeriesVal));
+        logOutputArea->append(QString("  Cshunt2: %1").arg(cShunt2Val));
+        logOutputArea->append(QString("  Rshunt2: %1").arg(rShunt2Val));
+
+        QString schematicXml = QString(
+            "<Qucs Schematic 24.4.1>\n"
+            "<Components>\n"
+            "<R R1 1 280 660 15 -26 0 1 \"Rshunt1\" 1 \"%1\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
+            "<C C1 1 280 580 17 -26 0 1 \"Cshunt1\" 1 \"%2\" 0 \"neutral\" 0>\n"
+            "<Port P1 1 560 510 4 -40 0 2 \"2\" 0 \"analog\" 0 \"v\" 0 \"\" 0>\n"
+            "<Port P2 1 240 510 -23 -40 1 0 \"1\" 0 \"analog\" 0 \"v\" 0 \"\" 0>\n"
+            "<L L1 1 360 510 -26 10 0 0 \"Lseries\" 1 \"%3\" 0>\n"
+            "<R R3 1 460 510 -26 15 0 0 \"Rseries\" 1 \"%4\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
+            "<C C2 1 540 580 17 -26 0 1 \"Cshunt2\" 1 \"%5\" 0 \"neutral\" 0>\n"
+            "<R R2 1 540 660 15 -26 0 1 \"Rshunt2\" 1 \"%6\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
+            "<GND * 1 540 710 0 0 0 0>\n"
+            "<GND * 1 280 710 0 0 0 0>\n"
+            "</Components>\n"
+            "<Wires>\n"
+            "<240 510 280 510 \"\" 0 0 0 \"\">\n"
+            "<280 510 280 550 \"\" 0 0 0 \"\">\n"
+            "<540 510 560 510 \"\" 0 0 0 \"\">\n"
+            "<540 510 540 550 \"\" 0 0 0 \"\">\n"
+            "<280 510 330 510 \"\" 0 0 0 \"\">\n"
+            "<490 510 540 510 \"\" 0 0 0 \"\">\n"
+            "<390 510 430 510 \"\" 0 0 0 \"\">\n"
+            "<280 610 280 630 \"\" 0 0 0 \"\">\n"
+            "<280 690 280 710 \"\" 0 0 0 \"\">\n"
+            "<540 690 540 710 \"\" 0 0 0 \"\">\n"
+            "<540 610 540 630 \"\" 0 0 0 \"\">\n"
+            "</Wires>\n"
+            "<Diagrams>\n"
+            "</Diagrams>\n"
+            "<Paintings>\n"
+            "</Paintings>\n"
+        ).arg(rShunt1Val).arg(cShunt1Val).arg(lSeriesVal).arg(rSeriesVal).arg(cShunt2Val).arg(rShunt2Val);
+
+        QClipboard *clipboard = QApplication::clipboard();
+        if (clipboard) {
+            clipboard->setText(schematicXml);
+            logOutputArea->append("Inductor-pi schematic XML copied to clipboard.");
+            QMessageBox::information(this, tr("Synthesize Inductor-pi"), tr("Schematic XML for Inductor-pi network has been generated and copied to clipboard."));
+        } else {
+            logOutputArea->append("Error: Could not access clipboard.");
+            QMessageBox::warning(this, tr("Synthesize Inductor-pi"), tr("Error: Could not access system clipboard."));
+        }
+
+    } else {
+        QMessageBox::warning(this, tr("Synthesize"), QString(tr("Synthesis for '%1' is not implemented yet.")).arg(selectedNetwork));
     }
 }
 
@@ -240,7 +331,6 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
     QString suffix = fileInfo.suffix().toLower();
     if (suffix.startsWith('s') && suffix.endsWith('p')) {
         bool ok;
-        // Correctly extract N from sNp, e.g. s2p -> 2, s12p -> 12
         QString n_str = suffix.mid(1, suffix.length() - (suffix.endsWith("p") ? 2 : 1) );
         int n = n_str.toInt(&ok);
         if (ok && n > 0) {
@@ -352,11 +442,6 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
                         number_of_ports = static_cast<int>(n_double);
                         qDebug() << "Number of ports determined from first data line:" << number_of_ports;
                     }
-                } else if (parameter_str.toUpper() == "S" && s_param_data_count > 0 && (s_param_data_count +1) % 2 != 0 && number_of_ports == 0) {
-                    // Special case for 1-port S-parameters (e.g. S11 only, freq + 2 values)
-                    // If total values = 3 (freq, S11mag, S11ang), then s_param_data_count = 2. n_squared = 1. n_double = 1.
-                    // This is already covered by the above.
-                    // What if it's Y or Z parameters? Parser currently only handles S.
                 }
             }
             if (number_of_ports == 0) {
@@ -385,8 +470,8 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
         int current_val_idx = 1;
         int expected_s_param_pairs = number_of_ports * number_of_ports;
 
-        for (int i_port = 1; i_port <= number_of_ports; ++i_port) { // Renamed i to i_port
-            for (int j_port = 1; j_port <= number_of_ports; ++j_port) { // Renamed j to j_port
+        for (int i_port = 1; i_port <= number_of_ports; ++i_port) {
+            for (int j_port = 1; j_port <= number_of_ports; ++j_port) {
                 QString s_param_mag_key = QString("S%1%2_dB").arg(i_port).arg(j_port);
                 QString s_param_ang_key = QString("S%1%2_ang").arg(i_port).arg(j_port);
                 QString s_param_re_key = QString("S%1%2_re").arg(i_port).arg(j_port);
@@ -474,6 +559,13 @@ void QucsTouchstoneViewer::displayData(const QMap<QString, QList<double>>& data)
         number_of_ports = static_cast<int>(data["n_ports"].first());
     }
     qDebug() << "Displaying data for" << number_of_ports << "-port file.";
+
+
+    // Define which S-parameters to attempt to display based on number_of_ports
+    // The table always has columns for S11, S12, S21, S22.
+    // We will fill S11 for S1P, and mark others N/A.
+    // For S2P (and potentially higher, though parser currently focuses on up to N*N on one line),
+    // it will try to fill all four.
 
     QStringList sParamTableColumns = {"11", "12", "21", "22"}; // Corresponds to table columns 1, 2, 3, 4
 
