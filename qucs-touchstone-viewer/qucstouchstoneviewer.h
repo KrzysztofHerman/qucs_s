@@ -22,6 +22,8 @@
 #include <vector> // For std::vector (used in helper function)
 #include <iomanip> // For std::fixed, std::setprecision (used via stringstream)
 #include <sstream> // For std::ostringstream
+#include <QLineEdit>        // For target frequency input
+#include <QDoubleValidator> // To validate numeric input in QLineEdit
 
 // Assuming tQucsSettings is defined elsewhere and accessible
 struct tQucsSettings {
@@ -45,7 +47,7 @@ private slots:
 private:
     void createWidgets();
     QMap<QString, QList<double>> readTouchstoneFile(const QString& filePath);
-    void displayData(const QMap<QString, QList<double>>& data);
+    void displayData(int specificRowIndex = -1); // -1 means display default (first 10 or all if less)
     void convert_MA_RI_to_dB(double * S_1, double * S_2, double *S_3, double *S_4, QString format);
 
 
@@ -65,11 +67,21 @@ private:
     QComboBox *networkTypeComboBox;
     QPushButton *synthesizeButton;
 
+    // New UI elements for target frequency
+    QLineEdit *targetFrequencyInput;
+    QComboBox *targetFrequencyUnitComboBox;
+    QPushButton *updateTableButton;
+
+    // Member variables for storing full data and filter state
+    QMap<QString, QList<double>> m_fullTouchstoneData;
+    bool m_isTargetFrequencyApplied;
+
 private slots:
     // ... existing openFile slot ...
     void loadInternalTestData();
     void handleLogMessage(const QString& message);
-    void onSynthesizeClicked(); // New slot for synthesize button
+    void onSynthesizeClicked();
+    void onUpdateTableClicked(); // New slot for update table button
 
 public: // Or private, depending on where qInstallMessageHandler is called
     static void qtMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg);

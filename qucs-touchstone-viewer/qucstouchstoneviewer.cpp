@@ -5,13 +5,16 @@
 #include <QLabel> // Required for QLabel (used in createWidgets)
 #include <QClipboard> // For accessing the system clipboard
 #include <QApplication> // Required for QApplication::clipboard()
-#include <QMessageBox> // Already implicitly included by QFileDialog, but good to be explicit
+#include <QMessageBox>
+#include <QLineEdit>
+#include <QDoubleValidator>
 
-#include <random>  // For std::mt19937, std::uniform_real_distribution (already in .h but good practice for .cpp)
-#include <vector>  // For std::vector (already in .h)
-#include <iomanip> // For std::fixed, std::setprecision (already in .h)
-#include <sstream> // For std::ostringstream (already in .h)
-#include <algorithm> // For std::sort
+#include <random>
+#include <vector>
+#include <iomanip>
+#include <sstream>
+#include <algorithm>
+#include <limits> // Required for std::numeric_limits
 
 QTextEdit* QucsTouchstoneViewer::S_logOutputArea = nullptr;
 
@@ -21,6 +24,8 @@ QucsTouchstoneViewer::QucsTouchstoneViewer(QWidget *parent)
     createWidgets();
     setWindowTitle(tr("Qucs Touchstone Viewer"));
     setMinimumSize(800, 600);
+
+    m_isTargetFrequencyApplied = false; // Initialize filter state
 
     S_logOutputArea = logOutputArea;
     qInstallMessageHandler(qtMessageHandler);
@@ -41,26 +46,51 @@ void QucsTouchstoneViewer::createWidgets()
     QWidget *controlsWidget = new QWidget();
     QGridLayout *controlsLayout = new QGridLayout(controlsWidget);
 
+    // File operations (Row 0)
     openButton = new QPushButton(tr("Select Touchstone File"), this);
     connect(openButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::openFile);
-
     loadInternalDataButton = new QPushButton(tr("Load Internal Test Data"), this);
     connect(loadInternalDataButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::loadInternalTestData);
-
     controlsLayout->addWidget(openButton, 0, 0);
     controlsLayout->addWidget(loadInternalDataButton, 0, 1);
 
+    // Network Synthesis controls (Row 1)
     QLabel *networkTypeLabel = new QLabel(tr("Network Type:"), this);
     networkTypeComboBox = new QComboBox(this);
     networkTypeComboBox->addItem(tr("Inductor-pi"));
-    networkTypeComboBox->addItem(tr("MiM-capacitor-pi")); // New item added
-
+    networkTypeComboBox->addItem(tr("MiM-capacitor-pi"));
     synthesizeButton = new QPushButton(tr("Synthesize"), this);
     connect(synthesizeButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::onSynthesizeClicked);
-
     controlsLayout->addWidget(networkTypeLabel, 1, 0);
     controlsLayout->addWidget(networkTypeComboBox, 1, 1);
     controlsLayout->addWidget(synthesizeButton, 1, 2);
+
+    // Target Frequency controls (Row 2)
+    QLabel *targetFreqLabel = new QLabel(tr("Target Frequency:"), this);
+    targetFrequencyInput = new QLineEdit("1", this);
+    QDoubleValidator *freqValidator = new QDoubleValidator(this);
+    freqValidator->setNotation(QDoubleValidator::StandardNotation);
+    freqValidator->setBottom(0);
+    targetFrequencyInput->setValidator(freqValidator);
+    targetFrequencyInput->setFixedWidth(100);
+
+    targetFrequencyUnitComboBox = new QComboBox(this);
+    targetFrequencyUnitComboBox->addItem("GHz");
+    targetFrequencyUnitComboBox->addItem("MHz");
+    targetFrequencyUnitComboBox->addItem("kHz");
+    targetFrequencyUnitComboBox->addItem("Hz");
+    targetFrequencyUnitComboBox->setCurrentText("GHz");
+
+    updateTableButton = new QPushButton(tr("Update Table"), this);
+    connect(updateTableButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::onUpdateTableClicked);
+
+    QHBoxLayout *targetFreqLayout = new QHBoxLayout();
+    targetFreqLayout->addWidget(targetFrequencyInput);
+    targetFreqLayout->addWidget(targetFrequencyUnitComboBox);
+
+    controlsLayout->addWidget(targetFreqLabel, 2, 0);
+    controlsLayout->addLayout(targetFreqLayout, 2, 1);
+    controlsLayout->addWidget(updateTableButton, 2, 2);
 
     dataTable = new QTableWidget(this);
     dataTable->setColumnCount(6);
@@ -88,11 +118,17 @@ void QucsTouchstoneViewer::openFile()
     QString filePath = QFileDialog::getOpenFileName(this, tr("Open Touchstone File"),
                                                     "", tr("Touchstone files (*.s*p);;All files (*.*)"));
     if (!filePath.isEmpty()) {
-        QMap<QString, QList<double>> data = readTouchstoneFile(filePath);
-        if (!data.isEmpty() && data.contains("frequency") && !data["frequency"].isEmpty() && data["frequency"].size() > 0) {
-            displayData(data);
+        m_fullTouchstoneData = readTouchstoneFile(filePath);
+
+        if (!m_fullTouchstoneData.isEmpty() && m_fullTouchstoneData.contains("frequency") && !m_fullTouchstoneData["frequency"].isEmpty()) {
+            m_isTargetFrequencyApplied = false;
+            displayData(); // Call with default argument -1, shows first 10 rows
+            logOutputArea->append(QString("File loaded: %1. Displaying initial data.").arg(QFileInfo(filePath).fileName()));
         } else {
             qWarning() << "readTouchstoneFile returned empty or invalid data for:" << filePath;
+            m_fullTouchstoneData.clear();
+            m_isTargetFrequencyApplied = false;
+            dataTable->setRowCount(0);
             QMessageBox::warning(this, tr("Error"), tr("Could not read or parse valid data from the Touchstone file. Check logs for details."));
         }
     }
@@ -168,11 +204,15 @@ void QucsTouchstoneViewer::loadInternalTestData() {
         tempFile.close();
         qDebug() << "Temporary internal S1P test file created at:" << tempFile.fileName();
 
-        QMap<QString, QList<double>> data = readTouchstoneFile(tempFile.fileName());
-        if (!data.isEmpty() && data.contains("frequency") && !data["frequency"].isEmpty() && data["frequency"].size() > 0) {
-            displayData(data);
+        m_fullTouchstoneData = readTouchstoneFile(tempFile.fileName());
+        if (!m_fullTouchstoneData.isEmpty() && m_fullTouchstoneData.contains("frequency") && !m_fullTouchstoneData["frequency"].isEmpty()) {
+            m_isTargetFrequencyApplied = false;
+            displayData();
         } else {
             qWarning() << "Could not read or parse valid data from the internal S1P test data.";
+            m_fullTouchstoneData.clear();
+            m_isTargetFrequencyApplied = false;
+            dataTable->setRowCount(0);
             QMessageBox::warning(this, tr("Internal S1P Test Error"), tr("Could not read or parse valid data from the internal S1P test data. Check logs."));
         }
     } else {
@@ -318,6 +358,73 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
     }
 }
 
+void QucsTouchstoneViewer::onUpdateTableClicked()
+{
+    QString targetFreqStr = targetFrequencyInput->text();
+    QString targetUnitStr = targetFrequencyUnitComboBox->currentText();
+    logOutputArea->append(QString("Update Table button clicked. Target: %1 %2").arg(targetFreqStr).arg(targetUnitStr));
+
+    bool conversionOk;
+    double targetFreqValue = targetFreqStr.toDouble(&conversionOk);
+
+    if (!conversionOk) {
+        qWarning() << "Invalid target frequency input:" << targetFreqStr;
+        QMessageBox::warning(this, tr("Invalid Input"), tr("Target frequency is not a valid number."));
+        logOutputArea->append("Error: Invalid target frequency input.");
+        return;
+    }
+
+    if (m_fullTouchstoneData.isEmpty() || !m_fullTouchstoneData.contains("frequency") || m_fullTouchstoneData["frequency"].isEmpty()) {
+        qWarning() << "No data loaded to filter.";
+        QMessageBox::information(this, tr("No Data"), tr("Please load a Touchstone file first."));
+        logOutputArea->append("Info: No data loaded to filter.");
+        return;
+    }
+
+    double targetFreqGHz = targetFreqValue;
+    if (targetUnitStr == "MHz") targetFreqGHz *= 1e-3;
+    else if (targetUnitStr == "kHz") targetFreqGHz *= 1e-6;
+    else if (targetUnitStr == "Hz") targetFreqGHz *= 1e-9;
+
+    qDebug() << "Scaled target frequency:" << targetFreqGHz << "GHz";
+
+    const QList<double>& frequencies = m_fullTouchstoneData["frequency"];
+    if (frequencies.isEmpty()) {
+        qWarning() << "Frequency data is present but empty.";
+        logOutputArea->append("Error: Frequency data list is empty.");
+        return;
+    }
+
+    int closestIndex = -1;
+    double minDiff = std::numeric_limits<double>::max();
+
+    for (int i = 0; i < frequencies.size(); ++i) {
+        double diff = std::abs(frequencies.at(i) - targetFreqGHz);
+        if (diff < minDiff) {
+            minDiff = diff;
+            closestIndex = i;
+        }
+    }
+
+    if (closestIndex != -1) {
+        m_isTargetFrequencyApplied = true;
+        logOutputArea->append(QString("Closest frequency found at index %1: %2 GHz (Target was %3 GHz). Min diff: %4")
+            .arg(closestIndex)
+            .arg(frequencies.at(closestIndex))
+            .arg(targetFreqGHz)
+            .arg(minDiff));
+
+        displayData(closestIndex);
+
+    } else {
+        m_isTargetFrequencyApplied = false;
+        logOutputArea->append("Error: Could not find a closest frequency.");
+        QMessageBox::warning(this, tr("Error"), tr("Could not determine closest frequency."));
+        displayData();
+    }
+}
+
+
 void QucsTouchstoneViewer::handleLogMessage(const QString& message) {
     if (logOutputArea) {
         logOutputArea->append(message);
@@ -365,14 +472,6 @@ QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double
             {1e-3, "m"}, {1e-6, "u"}, {1e-9, "n"},
             {1e-12, "p"}, {1e-15, "f"}
         };
-        // Add base unit Farad for C if rawValue is large enough, or handle it in search.
-        // For consistency in search, it's better to have it in the list if it's a possibility.
-        // However, typical C values for filters are small.
-        // Let's add it and let the search logic handle it.
-        // prefixes.insert(prefixes.begin(), {1.0, ""}); // Insert F at the start (largest multiplier for C if considering base)
-        // Re-evaluating: For C, the provided list is smallest to largest effectively.
-        // The search logic needs to be aware of this or the list sorted consistently.
-        // For now, the provided list for C is fine, as it is searched to find first fit >=1 or smallest.
     } else {
         qWarning() << "Unknown component type for random value generation:" << componentType;
         std::ostringstream oss;
@@ -389,7 +488,6 @@ QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double
     } else {
         bool foundIdealPrefix = false;
         if (!prefixes.empty()) {
-            // Sort all prefix lists from largest multiplier to smallest for a unified search approach
             std::sort(prefixes.begin(), prefixes.end(), [](const SIPrefix& a, const SIPrefix& b){
                 return a.multiplier > b.multiplier;
             });
@@ -713,71 +811,90 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
     return file_data;
 }
 
-void QucsTouchstoneViewer::displayData(const QMap<QString, QList<double>>& data)
+void QucsTouchstoneViewer::displayData(int specificRowIndex /* = -1 */)
 {
     dataTable->clearContents();
+    logOutputArea->append(QString("Updating display. Specific row: %1").arg(specificRowIndex));
 
-    if (!data.contains("frequency") || data["frequency"].isEmpty()) {
+    if (m_fullTouchstoneData.isEmpty() || !m_fullTouchstoneData.contains("frequency") || m_fullTouchstoneData["frequency"].isEmpty()) {
         dataTable->setRowCount(0);
-        // Message box logic from your previous version
-        if (data.isEmpty()) {
-            // Message may have been shown by openFile if readTouchstoneFile returned empty
-        } else {
-             if (!(data.contains("frequency") && !data["frequency"].isEmpty())) { // Check specifically if frequency is the issue
-                 QMessageBox::information(this, tr("Info"), tr("File parsed, but no valid frequency data points found."));
-            } else { // This case should ideally not be reached if the outer condition is true
-                 QMessageBox::information(this, tr("Info"), tr("No frequency data points found in the file."));
-            }
-        }
+        qWarning() << "displayData called with no valid m_fullTouchstoneData.";
         return;
     }
 
-    const QList<double>& freq = data["frequency"];
-    int numRowsToShow = qMin(10, freq.size());
-    dataTable->setRowCount(numRowsToShow);
-    qDebug() << "Displaying" << numRowsToShow << "rows.";
-
+    const QList<double>& freq = m_fullTouchstoneData["frequency"];
     int number_of_ports = 0;
-    if (data.contains("n_ports") && !data["n_ports"].isEmpty()) {
-        number_of_ports = static_cast<int>(data["n_ports"].first());
+    if (m_fullTouchstoneData.contains("n_ports") && !m_fullTouchstoneData["n_ports"].isEmpty()) {
+        number_of_ports = static_cast<int>(m_fullTouchstoneData["n_ports"].first());
     }
-    qDebug() << "Displaying data for" << number_of_ports << "-port file.";
 
-    QStringList sParamTableColumns = {"11", "12", "21", "22"}; // Corresponds to table columns 1, 2, 3, 4
+    QStringList sParamTableColumns = {"11", "12", "21", "22"};
 
-    for (int i = 0; i < numRowsToShow; ++i) {
-        // Frequency - Column 0
-        dataTable->setItem(i, 0, new QTableWidgetItem(QString::number(freq.at(i), 'g', 10)));
+    if (specificRowIndex != -1) {
+        if (specificRowIndex >= 0 && specificRowIndex < freq.size()) {
+            dataTable->setRowCount(1);
+            qDebug() << "Displaying single row index:" << specificRowIndex << "Freq:" << freq.at(specificRowIndex);
 
-        // S-parameters - Columns 1 to 4
-        for (int j = 0; j < sParamTableColumns.size(); ++j) {
-            QString current_s_param_index = sParamTableColumns.at(j);
-            QString s_param_key_db = QString("S%1_dB").arg(current_s_param_index);
+            dataTable->setItem(0, 0, new QTableWidgetItem(QString::number(freq.at(specificRowIndex), 'g', 10)));
 
-            bool should_display_sparam = false;
-            if (number_of_ports == 1) {
-                if (current_s_param_index == "11") {
-                    should_display_sparam = true;
+            for (int j = 0; j < sParamTableColumns.size(); ++j) {
+                QString current_s_param_index = sParamTableColumns.at(j);
+                QString s_param_key_db = QString("S%1_dB").arg(current_s_param_index);
+                bool should_display_sparam = false;
+
+                if (number_of_ports == 1 && current_s_param_index == "11") should_display_sparam = true;
+                else if (number_of_ports >= 2) should_display_sparam = true;
+
+                if (should_display_sparam && m_fullTouchstoneData.contains(s_param_key_db) && specificRowIndex < m_fullTouchstoneData[s_param_key_db].size()) {
+                    double val = m_fullTouchstoneData[s_param_key_db].at(specificRowIndex);
+                    dataTable->setItem(0, j + 1, new QTableWidgetItem(std::isnan(val) ? "NaN" : QString::number(val, 'f', 4)));
+                } else {
+                    dataTable->setItem(0, j + 1, new QTableWidgetItem("N/A"));
                 }
-            } else if (number_of_ports >= 2) {
-                should_display_sparam = true;
             }
 
-            if (should_display_sparam && data.contains(s_param_key_db) && i < data[s_param_key_db].size()) {
-                double val = data[s_param_key_db].at(i);
-                dataTable->setItem(i, j + 1, new QTableWidgetItem(std::isnan(val) ? "NaN" : QString::number(val, 'f', 4)));
+            if (m_fullTouchstoneData.contains("Z0") && specificRowIndex < m_fullTouchstoneData["Z0"].size()) {
+                 dataTable->setItem(0, 5, new QTableWidgetItem(QString::number(m_fullTouchstoneData["Z0"].at(specificRowIndex), 'f', 2)));
+            } else if (m_fullTouchstoneData.contains("Z0") && !m_fullTouchstoneData["Z0"].isEmpty()){
+                dataTable->setItem(0, 5, new QTableWidgetItem(QString::number(m_fullTouchstoneData["Z0"].first(), 'f', 2)));
             } else {
-                dataTable->setItem(i, j + 1, new QTableWidgetItem("N/A"));
+                dataTable->setItem(0, 5, new QTableWidgetItem("50.00 (default)"));
             }
-        }
-
-        // Z0 - Column 5
-        if (data.contains("Z0") && i < data["Z0"].size()) {
-             dataTable->setItem(i, 5, new QTableWidgetItem(QString::number(data["Z0"].at(i), 'f', 2)));
-        } else if (data.contains("Z0") && !data["Z0"].isEmpty()){
-            dataTable->setItem(i, 5, new QTableWidgetItem(QString::number(data["Z0"].first(), 'f', 2)));
         } else {
-            dataTable->setItem(i, 5, new QTableWidgetItem("50.00 (default)"));
+            dataTable->setRowCount(0);
+            qWarning() << "displayData called with invalid specificRowIndex:" << specificRowIndex << "Max index:" << freq.size() -1;
+        }
+    } else {
+        int numRowsToShow = qMin(10, freq.size());
+        dataTable->setRowCount(numRowsToShow);
+        qDebug() << "Displaying default view, rows:" << numRowsToShow;
+
+        for (int i = 0; i < numRowsToShow; ++i) {
+            dataTable->setItem(i, 0, new QTableWidgetItem(QString::number(freq.at(i), 'g', 10)));
+
+            for (int j = 0; j < sParamTableColumns.size(); ++j) {
+                QString current_s_param_index = sParamTableColumns.at(j);
+                QString s_param_key_db = QString("S%1_dB").arg(current_s_param_index);
+                bool should_display_sparam = false;
+
+                if (number_of_ports == 1 && current_s_param_index == "11") should_display_sparam = true;
+                else if (number_of_ports >= 2) should_display_sparam = true;
+
+                if (should_display_sparam && m_fullTouchstoneData.contains(s_param_key_db) && i < m_fullTouchstoneData[s_param_key_db].size()) {
+                    double val = m_fullTouchstoneData[s_param_key_db].at(i);
+                    dataTable->setItem(i, j + 1, new QTableWidgetItem(std::isnan(val) ? "NaN" : QString::number(val, 'f', 4)));
+                } else {
+                    dataTable->setItem(i, j + 1, new QTableWidgetItem("N/A"));
+                }
+            }
+
+            if (m_fullTouchstoneData.contains("Z0") && i < m_fullTouchstoneData["Z0"].size()) {
+                 dataTable->setItem(i, 5, new QTableWidgetItem(QString::number(m_fullTouchstoneData["Z0"].at(i), 'f', 2)));
+            } else if (m_fullTouchstoneData.contains("Z0") && !m_fullTouchstoneData["Z0"].isEmpty()){
+                dataTable->setItem(i, 5, new QTableWidgetItem(QString::number(m_fullTouchstoneData["Z0"].first(), 'f', 2)));
+            } else {
+                dataTable->setItem(i, 5, new QTableWidgetItem("50.00 (default)"));
+            }
         }
     }
 }
