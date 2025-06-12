@@ -204,16 +204,22 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
         logOutputArea->append(QString("  Rshunt2: %1").arg(rShunt2Val));
 
         QString schematicXml = QString(
-            "<Qucs Schematic 24.4.1>\n"
+            "<Qucs Schematic 25.1.2>\n"
             "<Components>\n"
-            "<R R1 1 280 660 15 -26 0 1 \"Rshunt1\" 1 \"%1\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
-            "<C C1 1 280 580 17 -26 0 1 \"Cshunt1\" 1 \"%2\" 0 \"neutral\" 0>\n"
+            // Rshunt1: %1 used for property name and property value
+            "<R R1 1 280 660 15 -26 0 1 \"%1\" 1 \"%1\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
+            // Cshunt1: %2 used for property name and property value
+            "<C C1 1 280 580 17 -26 0 1 \"%2\" 1 \"%2\" 0 \"neutral\" 0>\n"
             "<Port P1 1 560 510 4 -40 0 2 \"2\" 0 \"analog\" 0 \"v\" 0 \"\" 0>\n"
             "<Port P2 1 240 510 -23 -40 1 0 \"1\" 0 \"analog\" 0 \"v\" 0 \"\" 0>\n"
-            "<L L1 1 360 510 -26 10 0 0 \"Lseries\" 1 \"%3\" 0>\n"
-            "<R R3 1 460 510 -26 15 0 0 \"Rseries\" 1 \"%4\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
-            "<C C2 1 540 580 17 -26 0 1 \"Cshunt2\" 1 \"%5\" 0 \"neutral\" 0>\n"
-            "<R R2 1 540 660 15 -26 0 1 \"Rshunt2\" 1 \"%6\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
+            // Lseries: %3 used for property name and property value
+            "<L L1 1 360 510 -26 10 0 0 \"%3\" 1 \"%3\" 0>\n"
+            // Rseries: %4 used for property name and property value
+            "<R R3 1 460 510 -26 15 0 0 \"%4\" 1 \"%4\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
+            // Cshunt2: %5 used for property name and property value
+            "<C C2 1 540 580 17 -26 0 1 \"%5\" 1 \"%5\" 0 \"neutral\" 0>\n"
+            // Rshunt2: %6 used for property name and property value
+            "<R R2 1 540 660 15 -26 0 1 \"%6\" 1 \"%6\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
             "<GND * 1 540 710 0 0 0 0>\n"
             "<GND * 1 280 710 0 0 0 0>\n"
             "</Components>\n"
@@ -264,37 +270,55 @@ double QucsTouchstoneViewer::roundToNDecimals(double value, int n) {
 
 QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double maxVal, const QString& componentType)
 {
+    // Initialize random number generator (remains the same)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> distrib(minVal, maxVal);
     double rawValue = distrib(gen);
 
+    // Ensure rawValue is not exactly zero if minVal or maxVal are not, to avoid issues with log or division by zero with prefixes.
+    // This is a pragmatic fix for potential edge cases with very small random numbers.
+    if (rawValue == 0.0 && (minVal != 0.0 || maxVal != 0.0)) {
+        // If it randomly hit 0.0 but the range wasn't centered on 0, pick a tiny non-zero or re-roll.
+        // For simplicity, if minVal is positive, use a small fraction of minVal.
+        if (minVal > 0) rawValue = minVal * 0.01 + std::numeric_limits<double>::epsilon();
+        // else if maxVal is negative, use a small fraction of maxVal
+        // else (range includes 0), 0.0 is fine.
+        // This edge case handling might need more sophistication if ranges are tricky.
+        // For now, we assume ranges are positive for R,L,C.
+    }
+
+
     struct SIPrefix {
-        QString prefixChar;
         double multiplier;
+        QString prefixChar;
     };
 
     std::vector<SIPrefix> prefixes;
 
+    // Define prefixes from largest to smallest multiplier
     if (componentType.toUpper() == "R") {
         prefixes = {
-            {"G", 1e9}, {"M", 1e6}, {"k", 1e3},
-            {"", 1.0},
-            {"m", 1e-3}
+            {1e9, "G"}, {1e6, "M"}, {1e3, "k"},
+            {1.0, ""},
+            {1e-3, "m"}
         };
     } else if (componentType.toUpper() == "L") {
-        prefixes = {
-            {"G", 1e9}, {"M", 1e6}, {"k", 1e3},
-            {"", 1.0},
-            {"m", 1e-3}, {"u", 1e-6}, {"n", 1e-9},
-            {"p", 1e-12}
+        prefixes = { // Henry based
+            {1e9, "G"}, {1e6, "M"}, {1e3, "k"},
+            {1.0, ""},
+            {1e-3, "m"}, {1e-6, "u"}, {1e-9, "n"},
+            {1e-12, "p"}
         };
     } else if (componentType.toUpper() == "C") {
-        prefixes = {
-            {"", 1.0},
-            {"m", 1e-3}, {"u", 1e-6}, {"n", 1e-9},
-            {"p", 1e-12}, {"f", 1e-15}
+        prefixes = { // Farad based
+            // {1.0, ""}, // Base unit Farad is very large for typical components
+            {1e-3, "m"}, {1e-6, "u"}, {1e-9, "n"},
+            {1e-12, "p"}, {1e-15, "f"}
         };
+         // For capacitors, it's common to start checking from smaller units.
+         // So we will iterate from smallest to largest suitable for the [1,1000) range.
+         // However, the list above is still defined largest to smallest for a consistent approach below.
     } else {
         qWarning() << "Unknown component type for random value generation:" << componentType;
         std::ostringstream oss;
@@ -303,60 +327,67 @@ QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double
     }
 
     QString bestPrefixChar = "";
-    double bestScaledValue = rawValue;
+    double bestScaledValue = rawValue; // Default to raw value, no prefix
 
-    if (componentType.toUpper() == "R" || componentType.toUpper() == "L") {
-        std::sort(prefixes.begin(), prefixes.end(), [](const SIPrefix& a, const SIPrefix& b){
-            return a.multiplier > b.multiplier;
-        });
-        for (const auto& p : prefixes) {
-            if (rawValue >= p.multiplier && p.multiplier > 0) {
-                bestScaledValue = rawValue / p.multiplier;
-                bestPrefixChar = p.prefixChar;
-                break;
+    if (rawValue == 0.0) { // Handle zero value separately
+        bestPrefixChar = ""; // No prefix for zero
+        bestScaledValue = 0.0;
+    } else {
+        // Find the best prefix: iterate from largest to smallest
+        // The goal is to find a prefix such that rawValue / prefix.multiplier is in [1.0, 1000.0)
+        // If multiple fit, the first one (largest multiplier) is chosen.
+        // If none make it into [1.0, 1000.0) by being too large (e.g. rawValue is > 1000 * largest_multiplier),
+        // then use the largest_multiplier.
+        // If none make it into [1.0, 1000.0) by being too small (e.g. rawValue is < 1.0 * smallest_multiplier),
+        // then use the smallest_multiplier.
+
+        bool foundIdealPrefix = false;
+        if (!prefixes.empty()) {
+            // Try to find a prefix that puts the value in the [1, 1000) range
+            for (const auto& p : prefixes) {
+                if (p.multiplier <= 0) continue; // Should not happen with SI units
+                double scaledValue = rawValue / p.multiplier;
+                if (scaledValue >= 1.0 && scaledValue < 1000.0) {
+                    bestScaledValue = scaledValue;
+                    bestPrefixChar = p.prefixChar;
+                    foundIdealPrefix = true;
+                    break;
+                }
             }
-        }
-        if (bestPrefixChar.isEmpty() && !prefixes.empty()) {
-             bestScaledValue = rawValue / prefixes.back().multiplier;
-             bestPrefixChar = prefixes.back().prefixChar;
-        }
-    } else if (componentType.toUpper() == "C") {
-         std::sort(prefixes.begin(), prefixes.end(), [](const SIPrefix& a, const SIPrefix& b){
-            return a.multiplier < b.multiplier;
-        });
 
-        bestScaledValue = rawValue / prefixes.front().multiplier;
-        bestPrefixChar = prefixes.front().prefixChar;
-
-        for (const auto& p : prefixes) {
-            if (p.multiplier <= 0) continue;
-            double scaled = rawValue / p.multiplier;
-            if (scaled >= 1.0) {
-                bestScaledValue = scaled;
-                bestPrefixChar = p.prefixChar;
-                break;
+            if (!foundIdealPrefix) {
+                // If no ideal prefix, choose based on magnitude
+                if (rawValue >= prefixes.front().multiplier * 1000.0 && prefixes.front().multiplier > 0) {
+                    // Value is larger than 1000 * largest prefix, use largest prefix
+                    bestScaledValue = rawValue / prefixes.front().multiplier;
+                    bestPrefixChar = prefixes.front().prefixChar;
+                } else {
+                    // Value is smaller than 1.0 * smallest prefix (or any prefix that would make it >=1), use smallest prefix
+                    // The prefixes vector is sorted largest to smallest, so .back() is smallest.
+                    bestScaledValue = rawValue / prefixes.back().multiplier;
+                    bestPrefixChar = prefixes.back().prefixChar;
+                }
             }
         }
     }
 
+
+    // Round the scaled value
     double finalValueRounded = roundToNDecimals(bestScaledValue, 2);
+
+    // Adjust precision if rounding to 0.00 for a non-zero original value
+    int precision = 2;
     if (finalValueRounded == 0.0 && rawValue != 0.0 && bestScaledValue != 0.0) {
         finalValueRounded = roundToNDecimals(bestScaledValue, 3);
+        precision = 3;
         if (finalValueRounded == 0.0 && bestScaledValue != 0.0) {
             finalValueRounded = roundToNDecimals(bestScaledValue, 4);
+            precision = 4;
         }
     }
 
     std::ostringstream oss;
-    if (roundToNDecimals(bestScaledValue, 2) == 0.0 && bestScaledValue != 0.0) {
-        if (roundToNDecimals(bestScaledValue, 3) == 0.0 && bestScaledValue != 0.0) {
-            oss << std::fixed << std::setprecision(4) << finalValueRounded;
-        } else {
-            oss << std::fixed << std::setprecision(3) << finalValueRounded;
-        }
-    } else {
-        oss << std::fixed << std::setprecision(2) << finalValueRounded;
-    }
+    oss << std::fixed << std::setprecision(precision) << finalValueRounded;
     QString valueStr = QString::fromStdString(oss.str());
 
     if (bestPrefixChar.isEmpty()) {
