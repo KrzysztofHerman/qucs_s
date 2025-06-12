@@ -14,7 +14,8 @@
 #include <iomanip>
 #include <sstream>
 #include <algorithm>
-#include <limits> // Required for std::numeric_limits
+#include <limits>
+#include <complex> // For std::complex
 
 QTextEdit* QucsTouchstoneViewer::S_logOutputArea = nullptr;
 
@@ -25,7 +26,7 @@ QucsTouchstoneViewer::QucsTouchstoneViewer(QWidget *parent)
     setWindowTitle(tr("Qucs Touchstone Viewer"));
     setMinimumSize(800, 600);
 
-    m_isTargetFrequencyApplied = false; // Initialize filter state
+    m_isTargetFrequencyApplied = false;
 
     S_logOutputArea = logOutputArea;
     qInstallMessageHandler(qtMessageHandler);
@@ -46,7 +47,6 @@ void QucsTouchstoneViewer::createWidgets()
     QWidget *controlsWidget = new QWidget();
     QGridLayout *controlsLayout = new QGridLayout(controlsWidget);
 
-    // File operations (Row 0)
     openButton = new QPushButton(tr("Select Touchstone File"), this);
     connect(openButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::openFile);
     loadInternalDataButton = new QPushButton(tr("Load Internal Test Data"), this);
@@ -54,7 +54,6 @@ void QucsTouchstoneViewer::createWidgets()
     controlsLayout->addWidget(openButton, 0, 0);
     controlsLayout->addWidget(loadInternalDataButton, 0, 1);
 
-    // Network Synthesis controls (Row 1)
     QLabel *networkTypeLabel = new QLabel(tr("Network Type:"), this);
     networkTypeComboBox = new QComboBox(this);
     networkTypeComboBox->addItem(tr("Inductor-pi"));
@@ -65,7 +64,6 @@ void QucsTouchstoneViewer::createWidgets()
     controlsLayout->addWidget(networkTypeComboBox, 1, 1);
     controlsLayout->addWidget(synthesizeButton, 1, 2);
 
-    // Target Frequency controls (Row 2)
     QLabel *targetFreqLabel = new QLabel(tr("Target Frequency:"), this);
     targetFrequencyInput = new QLineEdit("1", this);
     QDoubleValidator *freqValidator = new QDoubleValidator(this);
@@ -81,8 +79,8 @@ void QucsTouchstoneViewer::createWidgets()
     targetFrequencyUnitComboBox->addItem("Hz");
     targetFrequencyUnitComboBox->setCurrentText("GHz");
 
-    updateTableButton = new QPushButton(tr("Update Table"), this);
-    connect(updateTableButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::onUpdateTableClicked);
+    analyzeFrequencyButton = new QPushButton(tr("Analyze Frequency"), this);
+    connect(analyzeFrequencyButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::onAnalyzeFrequencyClicked);
 
     QHBoxLayout *targetFreqLayout = new QHBoxLayout();
     targetFreqLayout->addWidget(targetFrequencyInput);
@@ -90,7 +88,7 @@ void QucsTouchstoneViewer::createWidgets()
 
     controlsLayout->addWidget(targetFreqLabel, 2, 0);
     controlsLayout->addLayout(targetFreqLayout, 2, 1);
-    controlsLayout->addWidget(updateTableButton, 2, 2);
+    controlsLayout->addWidget(analyzeFrequencyButton, 2, 2);
 
     dataTable = new QTableWidget(this);
     dataTable->setColumnCount(6);
@@ -122,7 +120,7 @@ void QucsTouchstoneViewer::openFile()
 
         if (!m_fullTouchstoneData.isEmpty() && m_fullTouchstoneData.contains("frequency") && !m_fullTouchstoneData["frequency"].isEmpty()) {
             m_isTargetFrequencyApplied = false;
-            displayData(); // Call with default argument -1, shows first 10 rows
+            displayData();
             logOutputArea->append(QString("File loaded: %1. Displaying initial data.").arg(QFileInfo(filePath).fileName()));
         } else {
             qWarning() << "readTouchstoneFile returned empty or invalid data for:" << filePath;
@@ -358,11 +356,16 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
     }
 }
 
-void QucsTouchstoneViewer::onUpdateTableClicked()
+void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
 {
+    dataTable->clearContents();
+    dataTable->setRowCount(0);
+    logOutputArea->clear();
+
     QString targetFreqStr = targetFrequencyInput->text();
     QString targetUnitStr = targetFrequencyUnitComboBox->currentText();
-    logOutputArea->append(QString("Update Table button clicked. Target: %1 %2").arg(targetFreqStr).arg(targetUnitStr));
+    logOutputArea->append(QString("Analyze Frequency input: Target: %1 %2").arg(targetFreqStr).arg(targetUnitStr));
+    qDebug() << "Analyze Frequency button clicked. Target Freq:" << targetFreqStr << targetUnitStr;
 
     bool conversionOk;
     double targetFreqValue = targetFreqStr.toDouble(&conversionOk);
@@ -375,53 +378,92 @@ void QucsTouchstoneViewer::onUpdateTableClicked()
     }
 
     if (m_fullTouchstoneData.isEmpty() || !m_fullTouchstoneData.contains("frequency") || m_fullTouchstoneData["frequency"].isEmpty()) {
-        qWarning() << "No data loaded to filter.";
+        qWarning() << "No data loaded to analyze.";
         QMessageBox::information(this, tr("No Data"), tr("Please load a Touchstone file first."));
-        logOutputArea->append("Info: No data loaded to filter.");
+        logOutputArea->append("Info: No data loaded to analyze.");
         return;
     }
 
-    double targetFreqGHz = targetFreqValue;
-    if (targetUnitStr == "MHz") targetFreqGHz *= 1e-3;
-    else if (targetUnitStr == "kHz") targetFreqGHz *= 1e-6;
-    else if (targetUnitStr == "Hz") targetFreqGHz *= 1e-9;
+    double f_target1_GHz = targetFreqValue;
+    if (targetUnitStr == "MHz") f_target1_GHz *= 1e-3;
+    else if (targetUnitStr == "kHz") f_target1_GHz *= 1e-6;
+    else if (targetUnitStr == "Hz") f_target1_GHz *= 1e-9;
+    logOutputArea->append(QString("Scaled Primary Target Frequency (f_target1): %1 GHz").arg(QString::number(f_target1_GHz, 'g', 10)));
 
-    qDebug() << "Scaled target frequency:" << targetFreqGHz << "GHz";
+    double f_target2_GHz = 0.05 * f_target1_GHz;
+    logOutputArea->append(QString("Scaled Secondary Target Frequency (f_target2 = 0.05 * f_target1): %1 GHz").arg(QString::number(f_target2_GHz, 'g', 10)));
 
     const QList<double>& frequencies = m_fullTouchstoneData["frequency"];
     if (frequencies.isEmpty()) {
-        qWarning() << "Frequency data is present but empty.";
-        logOutputArea->append("Error: Frequency data list is empty.");
+        qWarning() << "Frequency data list is present but empty.";
+        logOutputArea->append("Error: Frequency data list is empty in loaded file.");
         return;
     }
 
-    int closestIndex = -1;
-    double minDiff = std::numeric_limits<double>::max();
-
-    for (int i = 0; i < frequencies.size(); ++i) {
-        double diff = std::abs(frequencies.at(i) - targetFreqGHz);
-        if (diff < minDiff) {
-            minDiff = diff;
-            closestIndex = i;
+    auto findClosestFreqIndex = [&](double targetFreq) -> int {
+        int localClosestIndex = -1;
+        double localMinDiff = std::numeric_limits<double>::max();
+        for (int i = 0; i < frequencies.size(); ++i) {
+            double diff = std::abs(frequencies.at(i) - targetFreq);
+            if (diff < localMinDiff) {
+                localMinDiff = diff;
+                localClosestIndex = i;
+            }
         }
-    }
+        return localClosestIndex;
+    };
 
-    if (closestIndex != -1) {
-        m_isTargetFrequencyApplied = true;
-        logOutputArea->append(QString("Closest frequency found at index %1: %2 GHz (Target was %3 GHz). Min diff: %4")
-            .arg(closestIndex)
-            .arg(frequencies.at(closestIndex))
-            .arg(targetFreqGHz)
-            .arg(minDiff));
+    int closestIndex1 = findClosestFreqIndex(f_target1_GHz);
+    int closestIndex2 = findClosestFreqIndex(f_target2_GHz);
 
-        displayData(closestIndex);
+    logOutputArea->append("--- Analysis Results ---");
 
+    if (closestIndex1 != -1) {
+        double actualFreq1 = frequencies.at(closestIndex1);
+        logOutputArea->append(QString("Data for Primary Target (Closest to %1 GHz is %2 GHz, Index: %3)")
+            .arg(QString::number(f_target1_GHz, 'g', 10))
+            .arg(QString::number(actualFreq1, 'g', 10))
+            .arg(closestIndex1));
+        logSParametersForFrequencyPoint(closestIndex1, actualFreq1);
+        calculateAndLogZMatrixForFrequencyPoint(closestIndex1, actualFreq1);
+        calculateAndLogYMatrixForFrequencyPoint(closestIndex1, actualFreq1);
     } else {
-        m_isTargetFrequencyApplied = false;
-        logOutputArea->append("Error: Could not find a closest frequency.");
-        QMessageBox::warning(this, tr("Error"), tr("Could not determine closest frequency."));
-        displayData();
+        logOutputArea->append(QString("Could not find a closest frequency for the primary target %1 GHz.").arg(QString::number(f_target1_GHz, 'g', 10)));
     }
+
+    logOutputArea->append("");
+
+    bool process_f2 = true;
+    if (closestIndex2 == closestIndex1 && std::abs(f_target1_GHz - f_target2_GHz) < 1e-12) {
+        logOutputArea->append(QString("Secondary target frequency is identical to primary; results already shown."));
+        process_f2 = false;
+    }
+
+    if (closestIndex2 != -1 && process_f2) {
+        double actualFreq2 = frequencies.at(closestIndex2);
+         if (closestIndex2 == closestIndex1 && std::abs(frequencies.at(closestIndex1) - actualFreq2) > 1e-9 ){ // Check actual frequencies
+            logOutputArea->append(QString("Data for Secondary Target (Closest to %1 GHz is %2 GHz, Index: %3) - Note: Same actual frequency point as primary target.")
+                .arg(QString::number(f_target2_GHz, 'g', 10))
+                .arg(QString::number(actualFreq2, 'g', 10))
+                .arg(closestIndex2));
+            logSParametersForFrequencyPoint(closestIndex2, actualFreq2);
+            calculateAndLogZMatrixForFrequencyPoint(closestIndex2, actualFreq2);
+            calculateAndLogYMatrixForFrequencyPoint(closestIndex2, actualFreq2);
+
+        } else if (closestIndex2 != closestIndex1) {
+             logOutputArea->append(QString("Data for Secondary Target (Closest to %1 GHz is %2 GHz, Index: %3)")
+                .arg(QString::number(f_target2_GHz, 'g', 10))
+                .arg(QString::number(actualFreq2, 'g', 10))
+                .arg(closestIndex2));
+            logSParametersForFrequencyPoint(closestIndex2, actualFreq2);
+            calculateAndLogZMatrixForFrequencyPoint(closestIndex2, actualFreq2);
+            calculateAndLogYMatrixForFrequencyPoint(closestIndex2, actualFreq2);
+        }
+    } else if (process_f2) {
+        logOutputArea->append(QString("Could not find a closest frequency for the secondary target %1 GHz.").arg(QString::number(f_target2_GHz, 'g', 10)));
+    }
+
+    m_isTargetFrequencyApplied = (closestIndex1 != -1 || (closestIndex2 != -1 && process_f2) );
 }
 
 
@@ -429,6 +471,186 @@ void QucsTouchstoneViewer::handleLogMessage(const QString& message) {
     if (logOutputArea) {
         logOutputArea->append(message);
     }
+}
+
+QString QucsTouchstoneViewer::formatComplex(const std::complex<double>& num) {
+    if (std::isinf(num.real()) || std::isinf(num.imag()) ||
+        std::isnan(num.real()) || std::isnan(num.imag())) {
+        QString realStr = std::isinf(num.real()) ? (num.real() > 0 ? "inf" : "-inf") : (std::isnan(num.real()) ? "nan" : QString::number(num.real(), 'f', 4));
+        QString imagStr = std::isinf(num.imag()) ? (num.imag() > 0 ? "inf" : "-inf") : (std::isnan(num.imag()) ? "nan" : QString::number(std::abs(num.imag()), 'f', 4));
+        return QString("%1 %2 j%3").arg(realStr).arg(num.imag() < 0 ? "-" : "+").arg(imagStr);
+    }
+    return QString::asprintf("%.4f %c j%.4f", num.real(), (num.imag() < 0 ? '-' : '+'), std::abs(num.imag()));
+}
+
+void QucsTouchstoneViewer::logSParametersForFrequencyPoint(int pointIndex, double actualFreq) {
+    if (pointIndex < 0 || !m_fullTouchstoneData.contains("frequency") || pointIndex >= m_fullTouchstoneData["frequency"].size()) {
+        logOutputArea->append(QString("Error: Invalid index %1 for S-parameter logging.").arg(pointIndex));
+        return;
+    }
+
+    logOutputArea->append(QString("\n--- S-Parameters at %1 GHz ---").arg(QString::number(actualFreq, 'g', 10)));
+
+    int numPorts = 0;
+    if (m_fullTouchstoneData.contains("n_ports") && !m_fullTouchstoneData["n_ports"].isEmpty()) {
+        numPorts = static_cast<int>(m_fullTouchstoneData["n_ports"].first());
+    }
+
+    if (numPorts == 0) {
+        logOutputArea->append("Number of ports unknown, cannot log S-parameters reliably.");
+        return;
+    }
+
+    for (int i = 1; i <= numPorts; ++i) {
+        for (int j = 1; j <= numPorts; ++j) {
+            QString s_re_key = QString("S%1%2_re").arg(i).arg(j);
+            QString s_im_key = QString("S%1%2_im").arg(i).arg(j);
+
+            if (m_fullTouchstoneData.contains(s_re_key) && m_fullTouchstoneData.contains(s_im_key) &&
+                pointIndex < m_fullTouchstoneData[s_re_key].size() && pointIndex < m_fullTouchstoneData[s_im_key].size()) {
+
+                double s_re = m_fullTouchstoneData[s_re_key].at(pointIndex);
+                double s_im = m_fullTouchstoneData[s_im_key].at(pointIndex);
+
+                if (std::isnan(s_re) || std::isnan(s_im)) {
+                    logOutputArea->append(QString("S%1%2 = NaN").arg(i).arg(j));
+                } else {
+                    logOutputArea->append(QString("S%1%2 = %1").arg(i).arg(j).arg(formatComplex({s_re, s_im})));
+                }
+            } else {
+                logOutputArea->append(QString("S%1%2 = Data N/A").arg(i).arg(j));
+            }
+        }
+    }
+}
+
+void QucsTouchstoneViewer::calculateAndLogZMatrixForFrequencyPoint(int pointIndex, double actualFreq) {
+    int numPorts = 0;
+    if (m_fullTouchstoneData.contains("n_ports") && !m_fullTouchstoneData["n_ports"].isEmpty()) {
+        numPorts = static_cast<int>(m_fullTouchstoneData["n_ports"].first());
+    }
+
+    if (numPorts != 2) {
+        logOutputArea->append(QString("Z-Matrix calculation skipped: Only supported for 2-port data (found %1 ports).").arg(numPorts));
+        return;
+    }
+
+    if (pointIndex < 0 || !m_fullTouchstoneData.contains("Z0") || pointIndex >= m_fullTouchstoneData["Z0"].size()) {
+        logOutputArea->append(QString("Error: Invalid index %1 or missing Z0 for Z-matrix calculation.").arg(pointIndex));
+        return;
+    }
+    double Z0_val = m_fullTouchstoneData["Z0"].at(pointIndex);
+
+    std::complex<double> s11, s12, s21, s22;
+    QStringList s_indices = {"11", "12", "21", "22"};
+    std::vector<std::complex<double>*> s_params_ptrs = {&s11, &s12, &s21, &s22};
+
+    for (size_t k = 0; k < s_indices.size(); ++k) {
+        QString re_key = QString("S%1_re").arg(s_indices.at(k));
+        QString im_key = QString("S%1_im").arg(s_indices.at(k));
+        if (m_fullTouchstoneData.contains(re_key) && m_fullTouchstoneData.contains(im_key) &&
+            pointIndex < m_fullTouchstoneData[re_key].size() && pointIndex < m_fullTouchstoneData[im_key].size()) {
+            *(s_params_ptrs[k]) = {m_fullTouchstoneData[re_key].at(pointIndex), m_fullTouchstoneData[im_key].at(pointIndex)};
+             if (std::isnan(s_params_ptrs[k]->real()) || std::isnan(s_params_ptrs[k]->imag())) {
+                logOutputArea->append(QString("Error: S%1 contains NaN, cannot calculate Z-Matrix.").arg(s_indices.at(k)));
+                return;
+            }
+        } else {
+            logOutputArea->append(QString("Error: Missing S%1 data for Z-Matrix calculation.").arg(s_indices.at(k)));
+            return;
+        }
+    }
+
+    logOutputArea->append(QString("\n--- Z-Matrix at %1 GHz (Z0 = %2 Ohms) ---")
+        .arg(QString::number(actualFreq, 'g', 10)).arg(Z0_val));
+
+    std::complex<double> den_z = (1.0 - s11) * (1.0 - s22) - s12 * s21;
+
+    if (std::abs(den_z) < 1e-12) {
+        logOutputArea->append("Z-Matrix: Denominator is near zero, parameters are singular/infinite.");
+        logOutputArea->append("Z11 = Singular");
+        logOutputArea->append("Z12 = Singular");
+        logOutputArea->append("Z21 = Singular");
+        logOutputArea->append("Z22 = Singular");
+        return;
+    }
+
+    std::complex<double> Z11 = Z0_val * ((1.0 + s11) * (1.0 - s22) + s12 * s21) / den_z;
+    std::complex<double> Z12 = Z0_val * (2.0 * s12) / den_z;
+    std::complex<double> Z21 = Z0_val * (2.0 * s21) / den_z;
+    std::complex<double> Z22 = Z0_val * ((1.0 - s11) * (1.0 + s22) + s12 * s21) / den_z;
+
+    logOutputArea->append(QString("Z11 = %1").arg(formatComplex(Z11)));
+    logOutputArea->append(QString("Z12 = %1").arg(formatComplex(Z12)));
+    logOutputArea->append(QString("Z21 = %1").arg(formatComplex(Z21)));
+    logOutputArea->append(QString("Z22 = %1").arg(formatComplex(Z22)));
+}
+
+void QucsTouchstoneViewer::calculateAndLogYMatrixForFrequencyPoint(int pointIndex, double actualFreq) {
+    int numPorts = 0;
+    if (m_fullTouchstoneData.contains("n_ports") && !m_fullTouchstoneData["n_ports"].isEmpty()) {
+        numPorts = static_cast<int>(m_fullTouchstoneData["n_ports"].first());
+    }
+
+    if (numPorts != 2) {
+        logOutputArea->append(QString("Y-Matrix calculation skipped: Only supported for 2-port data (found %1 ports).").arg(numPorts));
+        return;
+    }
+
+    if (pointIndex < 0 || !m_fullTouchstoneData.contains("Z0") || pointIndex >= m_fullTouchstoneData["Z0"].size()) {
+        logOutputArea->append(QString("Error: Invalid index %1 or missing Z0 for Y-matrix calculation.").arg(pointIndex));
+        return;
+    }
+    double Z0_val = m_fullTouchstoneData["Z0"].at(pointIndex);
+    if (Z0_val == 0.0) {
+        logOutputArea->append("Error: Z0 is zero, cannot calculate Y-Matrix (division by zero).");
+        return;
+    }
+    double Y0_val = 1.0 / Z0_val;
+
+    std::complex<double> s11, s12, s21, s22;
+    QStringList s_indices = {"11", "12", "21", "22"};
+    std::vector<std::complex<double>*> s_params_ptrs = {&s11, &s12, &s21, &s22};
+
+    for (size_t k = 0; k < s_indices.size(); ++k) {
+        QString re_key = QString("S%1_re").arg(s_indices.at(k));
+        QString im_key = QString("S%1_im").arg(s_indices.at(k));
+        if (m_fullTouchstoneData.contains(re_key) && m_fullTouchstoneData.contains(im_key) &&
+            pointIndex < m_fullTouchstoneData[re_key].size() && pointIndex < m_fullTouchstoneData[im_key].size()) {
+            *(s_params_ptrs[k]) = {m_fullTouchstoneData[re_key].at(pointIndex), m_fullTouchstoneData[im_key].at(pointIndex)};
+            if (std::isnan(s_params_ptrs[k]->real()) || std::isnan(s_params_ptrs[k]->imag())) {
+                logOutputArea->append(QString("Error: S%1 contains NaN, cannot calculate Y-Matrix.").arg(s_indices.at(k)));
+                return;
+            }
+        } else {
+            logOutputArea->append(QString("Error: Missing S%1 data for Y-Matrix calculation.").arg(s_indices.at(k)));
+            return;
+        }
+    }
+
+    logOutputArea->append(QString("\n--- Y-Matrix at %1 GHz (Y0 = 1/%2 Siemens) ---")
+        .arg(QString::number(actualFreq, 'g', 10)).arg(Z0_val));
+
+    std::complex<double> den_y = (1.0 + s11) * (1.0 + s22) - s12 * s21;
+
+    if (std::abs(den_y) < 1e-12) {
+        logOutputArea->append("Y-Matrix: Denominator is near zero, parameters are singular/infinite.");
+        logOutputArea->append("Y11 = Singular");
+        logOutputArea->append("Y12 = Singular");
+        logOutputArea->append("Y21 = Singular");
+        logOutputArea->append("Y22 = Singular");
+        return;
+    }
+
+    std::complex<double> Y11 = Y0_val * ((1.0 - s11) * (1.0 + s22) + s12 * s21) / den_y;
+    std::complex<double> Y12 = Y0_val * (-2.0 * s12) / den_y;
+    std::complex<double> Y21 = Y0_val * (-2.0 * s21) / den_y;
+    std::complex<double> Y22 = Y0_val * ((1.0 + s11) * (1.0 - s22) + s12 * s21) / den_y;
+
+    logOutputArea->append(QString("Y11 = %1").arg(formatComplex(Y11)));
+    logOutputArea->append(QString("Y12 = %1").arg(formatComplex(Y12)));
+    logOutputArea->append(QString("Y21 = %1").arg(formatComplex(Y21)));
+    logOutputArea->append(QString("Y22 = %1").arg(formatComplex(Y22)));
 }
 
 double QucsTouchstoneViewer::roundToNDecimals(double value, int n) {

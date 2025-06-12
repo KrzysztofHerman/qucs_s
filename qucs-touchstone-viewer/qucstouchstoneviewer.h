@@ -24,6 +24,7 @@
 #include <sstream> // For std::ostringstream
 #include <QLineEdit>        // For target frequency input
 #include <QDoubleValidator> // To validate numeric input in QLineEdit
+#include <complex> // For std::complex
 
 // Assuming tQucsSettings is defined elsewhere and accessible
 struct tQucsSettings {
@@ -70,18 +71,24 @@ private:
     // New UI elements for target frequency
     QLineEdit *targetFrequencyInput;
     QComboBox *targetFrequencyUnitComboBox;
-    QPushButton *updateTableButton;
+    QPushButton *analyzeFrequencyButton;
 
     // Member variables for storing full data and filter state
     QMap<QString, QList<double>> m_fullTouchstoneData;
     bool m_isTargetFrequencyApplied;
+
+    // Helpers for S, Z, Y matrix logging
+    void logSParametersForFrequencyPoint(int pointIndex, double actualFreq);
+    void calculateAndLogZMatrixForFrequencyPoint(int pointIndex, double actualFreq);
+    void calculateAndLogYMatrixForFrequencyPoint(int pointIndex, double actualFreq);
+    QString formatComplex(const std::complex<double>& num); // Helper to format complex numbers
 
 private slots:
     // ... existing openFile slot ...
     void loadInternalTestData();
     void handleLogMessage(const QString& message);
     void onSynthesizeClicked();
-    void onUpdateTableClicked(); // New slot for update table button
+    void onAnalyzeFrequencyClicked(); // New slot for analyze frequency button
 
 public: // Or private, depending on where qInstallMessageHandler is called
     static void qtMessageHandler(QtMsgType type, const QMessageLogContext &context, const QString &msg);
