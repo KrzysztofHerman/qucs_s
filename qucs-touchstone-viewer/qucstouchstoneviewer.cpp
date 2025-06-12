@@ -7,7 +7,11 @@
 #include <QApplication> // Required for QApplication::clipboard()
 #include <QMessageBox> // Already implicitly included by QFileDialog, but good to be explicit
 
-// QTextEdit, QComboBox etc. are included via qucstouchstoneviewer.h -> QMainWindow -> QtWidgets
+#include <random>  // For std::mt19937, std::uniform_real_distribution (already in .h but good practice for .cpp)
+#include <vector>  // For std::vector (already in .h)
+#include <iomanip> // For std::fixed, std::setprecision (already in .h)
+#include <sstream> // For std::ostringstream (already in .h)
+#include <algorithm> // For std::sort
 
 QTextEdit* QucsTouchstoneViewer::S_logOutputArea = nullptr;
 
@@ -181,13 +185,8 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
     QString selectedNetwork = networkTypeComboBox->currentText();
     qDebug() << "Synthesize button clicked for network type:" << selectedNetwork;
 
-    if (selectedNetwork == tr("Inductor-pi")) { // Use tr() for future localization
+    if (selectedNetwork == tr("Inductor-pi")) {
         logOutputArea->append("Synthesizing Inductor-pi network...");
-
-        // Define value ranges
-        // Resistors: 1 Ohm to 100 kOhm (1e0 to 1e5 Ohms)
-        // Inductors: 1 nH to 100 mH (1e-9 to 1e-1 Henries)
-        // Capacitors: 1 pF to 10 uF (1e-12 to 1e-5 Farads)
 
         QString rShunt1Val = generateFormattedRandomValue(1.0, 100e3, "R");
         QString cShunt1Val = generateFormattedRandomValue(1e-12, 10e-6, "C");
@@ -257,6 +256,119 @@ void QucsTouchstoneViewer::handleLogMessage(const QString& message) {
         logOutputArea->append(message);
     }
 }
+
+double QucsTouchstoneViewer::roundToNDecimals(double value, int n) {
+    double multiplier = std::pow(10.0, n);
+    return std::round(value * multiplier) / multiplier;
+}
+
+QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double maxVal, const QString& componentType)
+{
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> distrib(minVal, maxVal);
+    double rawValue = distrib(gen);
+
+    struct SIPrefix {
+        QString prefixChar;
+        double multiplier;
+    };
+
+    std::vector<SIPrefix> prefixes;
+
+    if (componentType.toUpper() == "R") {
+        prefixes = {
+            {"G", 1e9}, {"M", 1e6}, {"k", 1e3},
+            {"", 1.0},
+            {"m", 1e-3}
+        };
+    } else if (componentType.toUpper() == "L") {
+        prefixes = {
+            {"G", 1e9}, {"M", 1e6}, {"k", 1e3},
+            {"", 1.0},
+            {"m", 1e-3}, {"u", 1e-6}, {"n", 1e-9},
+            {"p", 1e-12}
+        };
+    } else if (componentType.toUpper() == "C") {
+        prefixes = {
+            {"", 1.0},
+            {"m", 1e-3}, {"u", 1e-6}, {"n", 1e-9},
+            {"p", 1e-12}, {"f", 1e-15}
+        };
+    } else {
+        qWarning() << "Unknown component type for random value generation:" << componentType;
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(2) << rawValue;
+        return QString::fromStdString(oss.str());
+    }
+
+    QString bestPrefixChar = "";
+    double bestScaledValue = rawValue;
+
+    if (componentType.toUpper() == "R" || componentType.toUpper() == "L") {
+        std::sort(prefixes.begin(), prefixes.end(), [](const SIPrefix& a, const SIPrefix& b){
+            return a.multiplier > b.multiplier;
+        });
+        for (const auto& p : prefixes) {
+            if (rawValue >= p.multiplier && p.multiplier > 0) {
+                bestScaledValue = rawValue / p.multiplier;
+                bestPrefixChar = p.prefixChar;
+                break;
+            }
+        }
+        if (bestPrefixChar.isEmpty() && !prefixes.empty()) {
+             bestScaledValue = rawValue / prefixes.back().multiplier;
+             bestPrefixChar = prefixes.back().prefixChar;
+        }
+    } else if (componentType.toUpper() == "C") {
+         std::sort(prefixes.begin(), prefixes.end(), [](const SIPrefix& a, const SIPrefix& b){
+            return a.multiplier < b.multiplier;
+        });
+
+        bestScaledValue = rawValue / prefixes.front().multiplier;
+        bestPrefixChar = prefixes.front().prefixChar;
+
+        for (const auto& p : prefixes) {
+            if (p.multiplier <= 0) continue;
+            double scaled = rawValue / p.multiplier;
+            if (scaled >= 1.0) {
+                bestScaledValue = scaled;
+                bestPrefixChar = p.prefixChar;
+                break;
+            }
+        }
+    }
+
+    double finalValueRounded = roundToNDecimals(bestScaledValue, 2);
+    if (finalValueRounded == 0.0 && rawValue != 0.0 && bestScaledValue != 0.0) {
+        finalValueRounded = roundToNDecimals(bestScaledValue, 3);
+        if (finalValueRounded == 0.0 && bestScaledValue != 0.0) {
+            finalValueRounded = roundToNDecimals(bestScaledValue, 4);
+        }
+    }
+
+    std::ostringstream oss;
+    if (roundToNDecimals(bestScaledValue, 2) == 0.0 && bestScaledValue != 0.0) {
+        if (roundToNDecimals(bestScaledValue, 3) == 0.0 && bestScaledValue != 0.0) {
+            oss << std::fixed << std::setprecision(4) << finalValueRounded;
+        } else {
+            oss << std::fixed << std::setprecision(3) << finalValueRounded;
+        }
+    } else {
+        oss << std::fixed << std::setprecision(2) << finalValueRounded;
+    }
+    QString valueStr = QString::fromStdString(oss.str());
+
+    if (bestPrefixChar.isEmpty()) {
+        return valueStr;
+    } else {
+        return valueStr + " " + bestPrefixChar;
+    }
+}
+
+
+// The rest of the file (convert_MA_RI_to_dB, readTouchstoneFile, displayData) remains the same as in the last complete version.
+// For brevity, I'm not repeating them here, but they are part of the overwritten file content.
 
 void QucsTouchstoneViewer::convert_MA_RI_to_dB(double *S_val1, double *S_val2, double *S_re_out, double *S_im_out, QString format)
 {
@@ -559,13 +671,6 @@ void QucsTouchstoneViewer::displayData(const QMap<QString, QList<double>>& data)
         number_of_ports = static_cast<int>(data["n_ports"].first());
     }
     qDebug() << "Displaying data for" << number_of_ports << "-port file.";
-
-
-    // Define which S-parameters to attempt to display based on number_of_ports
-    // The table always has columns for S11, S12, S21, S22.
-    // We will fill S11 for S1P, and mark others N/A.
-    // For S2P (and potentially higher, though parser currently focuses on up to N*N on one line),
-    // it will try to fill all four.
 
     QStringList sParamTableColumns = {"11", "12", "21", "22"}; // Corresponds to table columns 1, 2, 3, 4
 
