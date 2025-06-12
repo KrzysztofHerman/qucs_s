@@ -53,6 +53,7 @@ void QucsTouchstoneViewer::createWidgets()
     QLabel *networkTypeLabel = new QLabel(tr("Network Type:"), this);
     networkTypeComboBox = new QComboBox(this);
     networkTypeComboBox->addItem(tr("Inductor-pi"));
+    networkTypeComboBox->addItem(tr("MiM-capacitor-pi")); // New item added
 
     synthesizeButton = new QPushButton(tr("Synthesize"), this);
     connect(synthesizeButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::onSynthesizeClicked);
@@ -195,7 +196,7 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
         QString cShunt2Val = generateFormattedRandomValue(1e-12, 10e-6, "C");
         QString rShunt2Val = generateFormattedRandomValue(1.0, 100e3, "R");
 
-        logOutputArea->append(QString("Generated values:"));
+        logOutputArea->append(QString("Generated values for Inductor-pi:"));
         logOutputArea->append(QString("  Rshunt1: %1").arg(rShunt1Val));
         logOutputArea->append(QString("  Cshunt1: %1").arg(cShunt1Val));
         logOutputArea->append(QString("  Lseries: %1").arg(lSeriesVal));
@@ -206,19 +207,13 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
         QString schematicXml = QString(
             "<Qucs Schematic 25.1.2>\n"
             "<Components>\n"
-            // Rshunt1: %1 used for property name and property value
             "<R R1 1 280 660 15 -26 0 1 \"%1\" 1 \"%1\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
-            // Cshunt1: %2 used for property name and property value
             "<C C1 1 280 580 17 -26 0 1 \"%2\" 1 \"%2\" 0 \"neutral\" 0>\n"
             "<Port P1 1 560 510 4 -40 0 2 \"2\" 0 \"analog\" 0 \"v\" 0 \"\" 0>\n"
             "<Port P2 1 240 510 -23 -40 1 0 \"1\" 0 \"analog\" 0 \"v\" 0 \"\" 0>\n"
-            // Lseries: %3 used for property name and property value
             "<L L1 1 360 510 -26 10 0 0 \"%3\" 1 \"%3\" 0>\n"
-            // Rseries: %4 used for property name and property value
             "<R R3 1 460 510 -26 15 0 0 \"%4\" 1 \"%4\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
-            // Cshunt2: %5 used for property name and property value
             "<C C2 1 540 580 17 -26 0 1 \"%5\" 1 \"%5\" 0 \"neutral\" 0>\n"
-            // Rshunt2: %6 used for property name and property value
             "<R R2 1 540 660 15 -26 0 1 \"%6\" 1 \"%6\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
             "<GND * 1 540 710 0 0 0 0>\n"
             "<GND * 1 280 710 0 0 0 0>\n"
@@ -240,7 +235,12 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
             "</Diagrams>\n"
             "<Paintings>\n"
             "</Paintings>\n"
-        ).arg(rShunt1Val).arg(cShunt1Val).arg(lSeriesVal).arg(rSeriesVal).arg(cShunt2Val).arg(rShunt2Val);
+        ).arg(rShunt1Val)
+         .arg(cShunt1Val)
+         .arg(lSeriesVal)
+         .arg(rSeriesVal)
+         .arg(cShunt2Val)
+         .arg(rShunt2Val);
 
         QClipboard *clipboard = QApplication::clipboard();
         if (clipboard) {
@@ -250,6 +250,67 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
         } else {
             logOutputArea->append("Error: Could not access clipboard.");
             QMessageBox::warning(this, tr("Synthesize Inductor-pi"), tr("Error: Could not access system clipboard."));
+        }
+
+    } else if (selectedNetwork == tr("MiM-capacitor-pi")) {
+        logOutputArea->append("Synthesizing MiM-capacitor-pi network...");
+
+        QString cShunt1Val = generateFormattedRandomValue(1e-12, 10e-6, "C");
+        QString lSeriesVal = generateFormattedRandomValue(1e-9, 100e-3, "L");
+        QString rSeriesVal = generateFormattedRandomValue(1.0, 100e3, "R");
+        QString cShunt2Val = generateFormattedRandomValue(1e-12, 10e-6, "C");
+        QString cMimVal    = generateFormattedRandomValue(1e-12, 10e-6, "C");
+
+        logOutputArea->append(QString("Generated values for MiM-capacitor-pi:"));
+        logOutputArea->append(QString("  Cshunt1: %1").arg(cShunt1Val));
+        logOutputArea->append(QString("  Lseries: %1").arg(lSeriesVal));
+        logOutputArea->append(QString("  Rseries: %1").arg(rSeriesVal));
+        logOutputArea->append(QString("  Cshunt2: %1").arg(cShunt2Val));
+        logOutputArea->append(QString("  Cmim:    %1").arg(cMimVal));
+
+        QString schematicXml = QString(
+            "<Qucs Schematic 25.1.2>\n"
+            "<Components>\n"
+            "<C C1 1 220 230 17 -26 0 1 \"%1\" 1 \"%1\" 0 \"neutral\" 0>\n"
+            "<Port P2 1 180 160 -23 -40 1 0 \"1\" 0 \"analog\" 0 \"v\" 0 \"\" 0>\n"
+            "<GND * 1 220 280 0 0 0 0>\n"
+            "<L L1 1 360 160 -26 10 0 0 \"%2\" 1 \"%2\" 0>\n"
+            "<Port P1 1 540 160 4 -40 0 2 \"2\" 0 \"analog\" 0 \"v\" 0 \"\" 0>\n"
+            "<R R2 1 440 160 -26 15 0 0 \"%3\" 1 \"%3\" 0 \"0.0\" 0 \"0.0\" 0 \"26.85\" 0 \"european\" 0>\n"
+            "<C C2 1 520 230 17 -26 0 1 \"%4\" 1 \"%4\" 0 \"neutral\" 0>\n"
+            "<GND * 1 520 280 0 0 0 0>\n"
+            "<C C3 1 290 160 -26 17 0 0 \"%5\" 1 \"%5\" 0 \"neutral\" 0>\n"
+            "</Components>\n"
+            "<Wires>\n"
+            "<180 160 220 160 \"\" 0 0 0 \"\">\n"
+            "<220 160 220 200 \"\" 0 0 0 \"\">\n"
+            "<220 260 220 280 \"\" 0 0 0 \"\">\n"
+            "<390 160 410 160 \"\" 0 0 0 \"\">\n"
+            "<520 160 540 160 \"\" 0 0 0 \"\">\n"
+            "<520 160 520 200 \"\" 0 0 0 \"\">\n"
+            "<470 160 520 160 \"\" 0 0 0 \"\">\n"
+            "<520 260 520 280 \"\" 0 0 0 \"\">\n"
+            "<320 160 330 160 \"\" 0 0 0 \"\">\n"
+            "<220 160 260 160 \"\" 0 0 0 \"\">\n"
+            "</Wires>\n"
+            "<Diagrams>\n"
+            "</Diagrams>\n"
+            "<Paintings>\n"
+            "</Paintings>\n"
+        ).arg(cShunt1Val)
+         .arg(lSeriesVal)
+         .arg(rSeriesVal)
+         .arg(cShunt2Val)
+         .arg(cMimVal);
+
+        QClipboard *clipboard = QApplication::clipboard();
+        if (clipboard) {
+            clipboard->setText(schematicXml);
+            logOutputArea->append("MiM-capacitor-pi schematic XML copied to clipboard.");
+            QMessageBox::information(this, tr("Synthesize MiM-capacitor-pi"), tr("Schematic XML for MiM-capacitor-pi network has been generated and copied to clipboard."));
+        } else {
+            logOutputArea->append("Error: Could not access clipboard.");
+            QMessageBox::warning(this, tr("Synthesize MiM-capacitor-pi"), tr("Error: Could not access system clipboard."));
         }
 
     } else {
@@ -270,24 +331,14 @@ double QucsTouchstoneViewer::roundToNDecimals(double value, int n) {
 
 QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double maxVal, const QString& componentType)
 {
-    // Initialize random number generator (remains the same)
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_real_distribution<> distrib(minVal, maxVal);
     double rawValue = distrib(gen);
 
-    // Ensure rawValue is not exactly zero if minVal or maxVal are not, to avoid issues with log or division by zero with prefixes.
-    // This is a pragmatic fix for potential edge cases with very small random numbers.
     if (rawValue == 0.0 && (minVal != 0.0 || maxVal != 0.0)) {
-        // If it randomly hit 0.0 but the range wasn't centered on 0, pick a tiny non-zero or re-roll.
-        // For simplicity, if minVal is positive, use a small fraction of minVal.
         if (minVal > 0) rawValue = minVal * 0.01 + std::numeric_limits<double>::epsilon();
-        // else if maxVal is negative, use a small fraction of maxVal
-        // else (range includes 0), 0.0 is fine.
-        // This edge case handling might need more sophistication if ranges are tricky.
-        // For now, we assume ranges are positive for R,L,C.
     }
-
 
     struct SIPrefix {
         double multiplier;
@@ -296,7 +347,6 @@ QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double
 
     std::vector<SIPrefix> prefixes;
 
-    // Define prefixes from largest to smallest multiplier
     if (componentType.toUpper() == "R") {
         prefixes = {
             {1e9, "G"}, {1e6, "M"}, {1e3, "k"},
@@ -304,21 +354,25 @@ QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double
             {1e-3, "m"}
         };
     } else if (componentType.toUpper() == "L") {
-        prefixes = { // Henry based
+        prefixes = {
             {1e9, "G"}, {1e6, "M"}, {1e3, "k"},
             {1.0, ""},
             {1e-3, "m"}, {1e-6, "u"}, {1e-9, "n"},
             {1e-12, "p"}
         };
     } else if (componentType.toUpper() == "C") {
-        prefixes = { // Farad based
-            // {1.0, ""}, // Base unit Farad is very large for typical components
+        prefixes = {
             {1e-3, "m"}, {1e-6, "u"}, {1e-9, "n"},
             {1e-12, "p"}, {1e-15, "f"}
         };
-         // For capacitors, it's common to start checking from smaller units.
-         // So we will iterate from smallest to largest suitable for the [1,1000) range.
-         // However, the list above is still defined largest to smallest for a consistent approach below.
+        // Add base unit Farad for C if rawValue is large enough, or handle it in search.
+        // For consistency in search, it's better to have it in the list if it's a possibility.
+        // However, typical C values for filters are small.
+        // Let's add it and let the search logic handle it.
+        // prefixes.insert(prefixes.begin(), {1.0, ""}); // Insert F at the start (largest multiplier for C if considering base)
+        // Re-evaluating: For C, the provided list is smallest to largest effectively.
+        // The search logic needs to be aware of this or the list sorted consistently.
+        // For now, the provided list for C is fine, as it is searched to find first fit >=1 or smallest.
     } else {
         qWarning() << "Unknown component type for random value generation:" << componentType;
         std::ostringstream oss;
@@ -327,25 +381,21 @@ QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double
     }
 
     QString bestPrefixChar = "";
-    double bestScaledValue = rawValue; // Default to raw value, no prefix
+    double bestScaledValue = rawValue;
 
-    if (rawValue == 0.0) { // Handle zero value separately
-        bestPrefixChar = ""; // No prefix for zero
+    if (rawValue == 0.0) {
+        bestPrefixChar = "";
         bestScaledValue = 0.0;
     } else {
-        // Find the best prefix: iterate from largest to smallest
-        // The goal is to find a prefix such that rawValue / prefix.multiplier is in [1.0, 1000.0)
-        // If multiple fit, the first one (largest multiplier) is chosen.
-        // If none make it into [1.0, 1000.0) by being too large (e.g. rawValue is > 1000 * largest_multiplier),
-        // then use the largest_multiplier.
-        // If none make it into [1.0, 1000.0) by being too small (e.g. rawValue is < 1.0 * smallest_multiplier),
-        // then use the smallest_multiplier.
-
         bool foundIdealPrefix = false;
         if (!prefixes.empty()) {
-            // Try to find a prefix that puts the value in the [1, 1000) range
+            // Sort all prefix lists from largest multiplier to smallest for a unified search approach
+            std::sort(prefixes.begin(), prefixes.end(), [](const SIPrefix& a, const SIPrefix& b){
+                return a.multiplier > b.multiplier;
+            });
+
             for (const auto& p : prefixes) {
-                if (p.multiplier <= 0) continue; // Should not happen with SI units
+                if (p.multiplier <= 0) continue;
                 double scaledValue = rawValue / p.multiplier;
                 if (scaledValue >= 1.0 && scaledValue < 1000.0) {
                     bestScaledValue = scaledValue;
@@ -356,14 +406,10 @@ QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double
             }
 
             if (!foundIdealPrefix) {
-                // If no ideal prefix, choose based on magnitude
                 if (rawValue >= prefixes.front().multiplier * 1000.0 && prefixes.front().multiplier > 0) {
-                    // Value is larger than 1000 * largest prefix, use largest prefix
                     bestScaledValue = rawValue / prefixes.front().multiplier;
                     bestPrefixChar = prefixes.front().prefixChar;
                 } else {
-                    // Value is smaller than 1.0 * smallest prefix (or any prefix that would make it >=1), use smallest prefix
-                    // The prefixes vector is sorted largest to smallest, so .back() is smallest.
                     bestScaledValue = rawValue / prefixes.back().multiplier;
                     bestPrefixChar = prefixes.back().prefixChar;
                 }
@@ -371,11 +417,8 @@ QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double
         }
     }
 
-
-    // Round the scaled value
     double finalValueRounded = roundToNDecimals(bestScaledValue, 2);
 
-    // Adjust precision if rounding to 0.00 for a non-zero original value
     int precision = 2;
     if (finalValueRounded == 0.0 && rawValue != 0.0 && bestScaledValue != 0.0) {
         finalValueRounded = roundToNDecimals(bestScaledValue, 3);
@@ -397,9 +440,6 @@ QString QucsTouchstoneViewer::generateFormattedRandomValue(double minVal, double
     }
 }
 
-
-// The rest of the file (convert_MA_RI_to_dB, readTouchstoneFile, displayData) remains the same as in the last complete version.
-// For brevity, I'm not repeating them here, but they are part of the overwritten file content.
 
 void QucsTouchstoneViewer::convert_MA_RI_to_dB(double *S_val1, double *S_val2, double *S_re_out, double *S_im_out, QString format)
 {
