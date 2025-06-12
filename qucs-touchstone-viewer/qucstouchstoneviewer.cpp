@@ -515,7 +515,8 @@ void QucsTouchstoneViewer::logSParametersForFrequencyPoint(int pointIndex, doubl
                 if (std::isnan(s_re) || std::isnan(s_im)) {
                     logOutputArea->append(QString("S%1%2 = NaN").arg(i).arg(j));
                 } else {
-                    logOutputArea->append(QString("S%1%2 = %1").arg(i).arg(j).arg(formatComplex({s_re, s_im})));
+                    QString s_param_name = QString("S%1%2").arg(i).arg(j); // Construct name Sij
+                    logOutputArea->append(s_param_name + " = " + formatComplex({s_re, s_im})); // Correctly log
                 }
             } else {
                 logOutputArea->append(QString("S%1%2 = Data N/A").arg(i).arg(j));
