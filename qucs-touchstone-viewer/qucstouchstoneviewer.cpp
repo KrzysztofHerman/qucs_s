@@ -264,24 +264,28 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
                 .arg(formatComplex(m_y21_calc))
                 .arg(formatComplex(m_y22_calc)));
 
+            bool calculationError = false;
+
             if (m_actual_ftarget_hz_calc <= 1e-9) {
-                logOutputArea->append("Warning: Target frequency for calculation is zero or too small. Cannot reliably calculate L/C values. Falling back to random values.");
-                m_analysisResultsAvailable = false;
+                logOutputArea->append("Warning: Target frequency for Inductor-pi calculation is zero or too small. Falling back to random values.");
+                calculationError = true;
             }
 
-            double omega = 2.0 * M_PI * m_actual_ftarget_hz_calc;
-            if (omega == 0.0) {
-                logOutputArea->append("Error: Omega is zero (target frequency is zero). Cannot calculate L/C. Falling back to random values.");
-                 m_analysisResultsAvailable = false;
+            double omega_target = 0.0;
+            if (!calculationError) {
+                omega_target = 2.0 * M_PI * m_actual_ftarget_hz_calc;
+                if (omega_target == 0.0) {
+                    logOutputArea->append("Error: omega_target is zero. Cannot calculate L/C. Falling back to random values.");
+                    calculationError = true;
+                }
             }
 
-            if (m_analysisResultsAvailable) {
+            double Rseries_raw = 0.0, Lseries_raw = 0.0, Cshunt1_raw = 0.0, Cshunt2_raw = 0.0, Rshunt1_raw = 0.0, Rshunt2_raw = 0.0;
+
+            if (!calculationError) {
                 std::complex<double> ymn = (m_y12_calc + m_y21_calc) / 2.0;
-
-                bool calculationError = false;
                 std::complex<double> y11_plus_ymn = m_y11_calc + ymn;
                 std::complex<double> y22_plus_ymn = m_y22_calc + ymn;
-
                 std::complex<double> Zshunt1_complex, Zshunt2_complex, Zseries_complex;
 
                 if (std::abs(y11_plus_ymn) < 1e-12) { logOutputArea->append("Error: Denominator (y11 + ymn) for Zshunt1 is near zero."); calculationError = true; }
@@ -293,23 +297,41 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
                 if (std::abs(ymn) < 1e-12) { logOutputArea->append("Error: Denominator (ymn) for Zseries is near zero."); calculationError = true; }
                 if (!calculationError) Zseries_complex = -1.0 / ymn;
 
-                if (calculationError) {
-                    logOutputArea->append("Cannot calculate component values due to division by zero. Falling back to random values.");
-                    // m_analysisResultsAvailable might already be false or will be caught by !usedCalculatedValues
-                } else {
-                    double Rseries_raw = Zseries_complex.real();
-                    double Lseries_raw = Zseries_complex.imag() / omega;
-                    double Cshunt1_raw = (std::abs(Zshunt1_complex.imag()) > 1e-18 && omega != 0.0) ? (-1.0 / (omega * Zshunt1_complex.imag())) : std::numeric_limits<double>::infinity();
-                    double Cshunt2_raw = (std::abs(Zshunt2_complex.imag()) > 1e-18 && omega != 0.0) ? (-1.0 / (omega * Zshunt2_complex.imag())) : std::numeric_limits<double>::infinity();
-                    double Rshunt1_raw = Zshunt1_complex.real();
-                    double Rshunt2_raw = Zshunt2_complex.real();
+                if (!calculationError) {
+                    Rseries_raw = Zseries_complex.real();
+                    Lseries_raw = (omega_target != 0.0) ? (Zseries_complex.imag() / omega_target) : std::numeric_limits<double>::infinity();
 
-                    logOutputArea->append(QString("Raw calculated: Rser=%1, Lser=%2, Csh1=%3, Csh2=%4, Rsh1=%5, Rsh2=%6")
+                    double Cs1_raw_intermediate = (std::abs(Zshunt1_complex.imag()) > 1e-18 && omega_target != 0.0) ? (-1.0 / (omega_target * Zshunt1_complex.imag())) : std::numeric_limits<double>::infinity();
+                    double Cs2_raw_intermediate = (std::abs(Zshunt2_complex.imag()) > 1e-18 && omega_target != 0.0) ? (-1.0 / (omega_target * Zshunt2_complex.imag())) : std::numeric_limits<double>::infinity();
+
+                    logOutputArea->append(QString("Intermediate calculated: Cs1_raw_intermediate=%1 F, Cs2_raw_intermediate=%2 F").arg(Cs1_raw_intermediate).arg(Cs2_raw_intermediate));
+
+                    if (Cs1_raw_intermediate <= 1e-18 || std::isinf(Cs1_raw_intermediate) || std::isnan(Cs1_raw_intermediate)) {
+                        logOutputArea->append(QString("Warning: Calculated Cs1_raw_intermediate is non-positive or invalid (%1 F).").arg(Cs1_raw_intermediate));
+                        calculationError = true;
+                    }
+                    if (Cs2_raw_intermediate <= 1e-18 || std::isinf(Cs2_raw_intermediate) || std::isnan(Cs2_raw_intermediate)) {
+                        logOutputArea->append(QString("Warning: Calculated Cs2_raw_intermediate is non-positive or invalid (%1 F).").arg(Cs2_raw_intermediate));
+                        calculationError = true;
+                    }
+
+                    if (!calculationError) {
+                        Cshunt1_raw = (Cs1_raw_intermediate + Cs2_raw_intermediate) / 2.0;
+                        Cshunt2_raw = Cshunt1_raw;
+                        if (Cshunt1_raw <= 1e-18) {
+                             logOutputArea->append(QString("Warning: Averaged Cshunt value is non-positive or extremely small (%1 F).").arg(Cshunt1_raw));
+                             calculationError = true;
+                        }
+                    }
+
+                    Rshunt1_raw = Zshunt1_complex.real();
+                    Rshunt2_raw = Zshunt2_complex.real();
+
+                    logOutputArea->append(QString("Raw calculated before final validation: Rser=%1, Lser=%2, Csh1=%3, Csh2=%4, Rsh1=%5, Rsh2=%6")
                         .arg(Rseries_raw).arg(Lseries_raw).arg(Cshunt1_raw).arg(Cshunt2_raw).arg(Rshunt1_raw).arg(Rshunt2_raw));
 
-                    if (Lseries_raw <= 0) { logOutputArea->append(QString("Warning: Calculated Lseries is non-positive (%1 H). Check Y-parameters or target frequency. Using random value for Lseries.").arg(Lseries_raw)); calculationError = true; }
-                    if (Cshunt1_raw <= 0 || std::isinf(Cshunt1_raw)) { logOutputArea->append(QString("Warning: Calculated Cshunt1 is non-positive or infinite (%1 F). Check Y-parameters or target frequency. Using random value for Cshunt1.").arg(Cshunt1_raw)); calculationError = true; }
-                    if (Cshunt2_raw <= 0 || std::isinf(Cshunt2_raw)) { logOutputArea->append(QString("Warning: Calculated Cshunt2 is non-positive or infinite (%1 F). Check Y-parameters or target frequency. Using random value for Cshunt2.").arg(Cshunt2_raw)); calculationError = true; }
+                    if (Lseries_raw <= 1e-15) { logOutputArea->append(QString("Warning: Calculated Lseries is non-positive or extremely small (%1 H).").arg(Lseries_raw)); calculationError = true; }
+
                     if (Rseries_raw < 0) { logOutputArea->append(QString("Warning: Calculated Rseries is negative (%1 Ohm). Using abs value.").arg(Rseries_raw)); Rseries_raw = std::abs(Rseries_raw); }
                     if (Rshunt1_raw < 0) { logOutputArea->append(QString("Warning: Calculated Rshunt1 is negative (%1 Ohm). Using abs value.").arg(Rshunt1_raw)); Rshunt1_raw = std::abs(Rshunt1_raw); }
                     if (Rshunt2_raw < 0) { logOutputArea->append(QString("Warning: Calculated Rshunt2 is negative (%1 Ohm). Using abs value.").arg(Rshunt2_raw)); Rshunt2_raw = std::abs(Rshunt2_raw); }
@@ -322,16 +344,17 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
                         cShunt2Val = formatComponentValue(Cshunt2_raw, "C");
                         rShunt2Val = formatComponentValue(Rshunt2_raw, "R");
                         usedCalculatedValues = true;
-                        logOutputArea->append("Successfully used calculated component values.");
-                    } else {
-                        logOutputArea->append("Fallback to random values due to issues with calculated L/C values.");
+                        logOutputArea->append("Successfully used calculated component values for Inductor-pi.");
                     }
                 }
+            }
+            if (calculationError) {
+                 logOutputArea->append("Fallback to random values for Inductor-pi due to calculation errors or non-physical results.");
             }
         }
 
         if (!usedCalculatedValues) {
-            logOutputArea->append("Using random values for Inductor-pi components.");
+            logOutputArea->append("Using random values for Inductor-pi components (either no analysis data, not 2-port, or calculation failed).");
             rShunt1Val = generateFormattedRandomValue(1.0, 100e3, "R");
             cShunt1Val = generateFormattedRandomValue(1e-12, 10e-6, "C");
             lSeriesVal = generateFormattedRandomValue(1e-9, 100e-3, "L");
@@ -430,7 +453,7 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
                     calculationError = true;
                 } else {
                     std::complex<double> Zseries_low_complex = -1.0 / ymn_low;
-                    if (Zseries_low_complex.imag() >= -1e-18 || omegal == 0.0) { // Imag part must be significantly negative for positive C
+                    if (Zseries_low_complex.imag() >= -1e-18 || omegal == 0.0) {
                         logOutputArea->append(QString("Error (low freq): -Zseries_low.imag (%1) is not sufficiently negative or omega is zero for Cser_low calc.")
                                               .arg(Zseries_low_complex.imag()));
                         calculationError = true;
