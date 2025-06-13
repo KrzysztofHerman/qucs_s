@@ -61,8 +61,9 @@ private:
     static QTextEdit* S_logOutputArea;
 
     // Helper functions for synthesis
-    QString generateFormattedRandomValue(double minVal, double maxVal, const QString& componentType);
     double roundToNDecimals(double value, int n);
+    QString formatComponentValue(double rawValue, const QString& componentType);
+    QString generateFormattedRandomValue(double minVal, double maxVal, const QString& componentType);
 
     // New UI elements for network synthesis
     QComboBox *networkTypeComboBox;
@@ -77,10 +78,25 @@ private:
     QMap<QString, QList<double>> m_fullTouchstoneData;
     bool m_isTargetFrequencyApplied;
 
+    // Members to store results from the last primary target frequency analysis (for 2-port files)
+    bool m_analysisResultsAvailable;
+    int  m_analyzedNumPorts; // Number of ports of the file for which analysis results are stored
+    double m_actual_ftarget_hz_calc; // Actual frequency (in Hz) of the primary target point
+    double m_Z0_calc;                // Z0 at the primary target point
+    std::complex<double> m_y11_calc;
+    std::complex<double> m_y12_calc;
+    std::complex<double> m_y21_calc;
+    std::complex<double> m_y22_calc;
+
     // Helpers for S, Z, Y matrix logging
     void logSParametersForFrequencyPoint(int pointIndex, double actualFreq);
     void calculateAndLogZMatrixForFrequencyPoint(int pointIndex, double actualFreq);
-    void calculateAndLogYMatrixForFrequencyPoint(int pointIndex, double actualFreq);
+    // Refactored calculation function (declaration)
+    bool calculateYMatrix(int pointIndex,
+                          std::complex<double>& y11_out, std::complex<double>& y12_out,
+                          std::complex<double>& y21_out, std::complex<double>& y22_out,
+                          double& Z0_at_point_out, int& numPorts_at_point_out);
+    void calculateAndLogYMatrixForFrequencyPoint(int pointIndex, double actualFreq); // Logging wrapper
     QString formatComplex(const std::complex<double>& num); // Helper to format complex numbers
 
 private slots:
