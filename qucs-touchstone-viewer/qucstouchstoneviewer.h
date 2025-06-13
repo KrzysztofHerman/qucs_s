@@ -88,6 +88,16 @@ private:
     std::complex<double> m_y21_calc;
     std::complex<double> m_y22_calc;
 
+    // New members for secondary (low) frequency analysis results
+    bool m_lowFreqAnalysisResultsAvailable;
+    // m_analyzedNumPorts is shared, Z0 and actual frequency for low point will be stored
+    double m_actual_flow_hz_calc; // Actual frequency (in Hz) of the low frequency point
+    double m_Z0_calc_low;         // Z0 at the low frequency point
+    std::complex<double> m_y11_calc_low;
+    std::complex<double> m_y12_calc_low;
+    std::complex<double> m_y21_calc_low;
+    std::complex<double> m_y22_calc_low;
+
     // Helpers for S, Z, Y matrix logging
     void logSParametersForFrequencyPoint(int pointIndex, double actualFreq);
     void calculateAndLogZMatrixForFrequencyPoint(int pointIndex, double actualFreq);

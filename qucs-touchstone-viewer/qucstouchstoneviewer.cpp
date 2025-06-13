@@ -30,7 +30,14 @@ QucsTouchstoneViewer::QucsTouchstoneViewer(QWidget *parent)
     m_analysisResultsAvailable = false;
     m_analyzedNumPorts = 0;
     m_actual_ftarget_hz_calc = 0.0;
-    m_Z0_calc = 50.0; // Default Z0
+    m_Z0_calc = 50.0;
+    m_y11_calc = m_y12_calc = m_y21_calc = m_y22_calc = std::complex<double>(0.0, 0.0);
+
+    // Initialize new low frequency members
+    m_lowFreqAnalysisResultsAvailable = false;
+    m_actual_flow_hz_calc = 0.0;
+    m_Z0_calc_low = 50.0;
+    m_y11_calc_low = m_y12_calc_low = m_y21_calc_low = m_y22_calc_low = std::complex<double>(0.0, 0.0);
 
     S_logOutputArea = logOutputArea;
     qInstallMessageHandler(qtMessageHandler);
@@ -127,6 +134,7 @@ void QucsTouchstoneViewer::openFile()
 
         m_analysisResultsAvailable = false;
         m_analyzedNumPorts = 0;
+        m_lowFreqAnalysisResultsAvailable = false;
 
         if (!m_fullTouchstoneData.isEmpty() && m_fullTouchstoneData.contains("frequency") && !m_fullTouchstoneData["frequency"].isEmpty()) {
             m_isTargetFrequencyApplied = false;
@@ -213,8 +221,10 @@ void QucsTouchstoneViewer::loadInternalTestData() {
         qDebug() << "Temporary internal S1P test file created at:" << tempFile.fileName();
 
         m_fullTouchstoneData = readTouchstoneFile(tempFile.fileName());
+
         m_analysisResultsAvailable = false;
         m_analyzedNumPorts = 0;
+        m_lowFreqAnalysisResultsAvailable = false;
 
         if (!m_fullTouchstoneData.isEmpty() && m_fullTouchstoneData.contains("frequency") && !m_fullTouchstoneData["frequency"].isEmpty()) {
             m_isTargetFrequencyApplied = false;
@@ -254,9 +264,9 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
                 .arg(formatComplex(m_y21_calc))
                 .arg(formatComplex(m_y22_calc)));
 
-            if (m_actual_ftarget_hz_calc <= 1e-9) { // Effectively zero or negative frequency
+            if (m_actual_ftarget_hz_calc <= 1e-9) {
                 logOutputArea->append("Warning: Target frequency for calculation is zero or too small. Cannot reliably calculate L/C values. Falling back to random values.");
-                m_analysisResultsAvailable = false; // Ensure fallback
+                m_analysisResultsAvailable = false;
             }
 
             double omega = 2.0 * M_PI * m_actual_ftarget_hz_calc;
@@ -285,7 +295,7 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
 
                 if (calculationError) {
                     logOutputArea->append("Cannot calculate component values due to division by zero. Falling back to random values.");
-                    // m_analysisResultsAvailable remains false or is set false by prior checks
+                    // m_analysisResultsAvailable might already be false or will be caught by !usedCalculatedValues
                 } else {
                     double Rseries_raw = Zseries_complex.real();
                     double Lseries_raw = Zseries_complex.imag() / omega;
@@ -386,14 +396,143 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
 
     } else if (selectedNetwork == tr("MiM-capacitor-pi")) {
         logOutputArea->append("\n--- Synthesizing MiM-capacitor-pi Network ---");
-        // This part remains unchanged, uses random values as before
-        QString cShunt1Val = generateFormattedRandomValue(1e-12, 10e-6, "C");
-        QString lSeriesVal = generateFormattedRandomValue(1e-9, 100e-3, "L");
-        QString rSeriesVal = generateFormattedRandomValue(1.0, 100e3, "R");
-        QString cShunt2Val = generateFormattedRandomValue(1e-12, 10e-6, "C");
-        QString cMimVal    = generateFormattedRandomValue(1e-12, 10e-6, "C");
+        QString cShunt1Val, lSeriesVal, rSeriesVal, cShunt2Val, cMimVal;
+        bool usedCalculatedMiMValues = false;
 
-        logOutputArea->append(QString("Generated values for MiM-capacitor-pi (random):"));
+        if (m_analysisResultsAvailable && m_lowFreqAnalysisResultsAvailable && m_analyzedNumPorts == 2) {
+            logOutputArea->append(QString("Attempting to use calculated values based on analysis at:"));
+            logOutputArea->append(QString("  f_target (primary): %1 Hz (Z0=%2 Ohm)")
+                .arg(QString::number(m_actual_ftarget_hz_calc, 'g', 10))
+                .arg(QString::number(m_Z0_calc, 'f', 2)));
+            logOutputArea->append(QString("  f_low (secondary): %1 Hz (Z0=%2 Ohm)")
+                .arg(QString::number(m_actual_flow_hz_calc, 'g', 10))
+                .arg(QString::number(m_Z0_calc_low, 'f', 2)));
+
+            logOutputArea->append(QString("Using Y-params at f_target: Y11=%1; Y12=%2; Y21=%3; Y22=%4")
+                .arg(formatComplex(m_y11_calc)).arg(formatComplex(m_y12_calc))
+                .arg(formatComplex(m_y21_calc)).arg(formatComplex(m_y22_calc)));
+            logOutputArea->append(QString("Using Y-params at f_low: Y11=%1; Y12=%2; Y21=%3; Y22=%4")
+                .arg(formatComplex(m_y11_calc_low)).arg(formatComplex(m_y12_calc_low))
+                .arg(formatComplex(m_y21_calc_low)).arg(formatComplex(m_y22_calc_low)));
+
+            bool calculationError = false;
+            double Cser_low_raw = 0.0;
+
+            if (m_actual_flow_hz_calc <= 1e-9) {
+                logOutputArea->append("Error: Low frequency (flow) for calculation is zero or too small. Cannot proceed.");
+                calculationError = true;
+            } else {
+                double omegal = 2.0 * M_PI * m_actual_flow_hz_calc;
+                std::complex<double> ymn_low = (m_y12_calc_low + m_y21_calc_low) / 2.0;
+
+                if (std::abs(ymn_low) < 1e-12) {
+                    logOutputArea->append("Error (low freq): Denominator (ymn_low) for Zseries_low_complex is near zero.");
+                    calculationError = true;
+                } else {
+                    std::complex<double> Zseries_low_complex = -1.0 / ymn_low;
+                    if (Zseries_low_complex.imag() >= -1e-18 || omegal == 0.0) { // Imag part must be significantly negative for positive C
+                        logOutputArea->append(QString("Error (low freq): -Zseries_low.imag (%1) is not sufficiently negative or omega is zero for Cser_low calc.")
+                                              .arg(Zseries_low_complex.imag()));
+                        calculationError = true;
+                    } else {
+                        Cser_low_raw = 1.0 / (-Zseries_low_complex.imag() * omegal);
+                        logOutputArea->append(QString("Intermediate Cser_low (raw): %1 F").arg(Cser_low_raw));
+                        if (Cser_low_raw <= 1e-18) {
+                            logOutputArea->append(QString("Warning (low freq): Calculated Cser_low is non-positive or extremely small (%1 F).").arg(Cser_low_raw));
+                            calculationError = true;
+                        }
+                    }
+                }
+            }
+
+            double Rseries_raw = 0.0, Lseries_raw = 0.0, Cmim_raw = 0.0, Cshunt1_raw_calc = 0.0, Cshunt2_raw_calc = 0.0;
+
+            if (!calculationError && m_actual_ftarget_hz_calc <= 1e-9) {
+                 logOutputArea->append("Error: Target frequency for calculation is zero or too small. Cannot reliably calculate L/C values.");
+                 calculationError = true;
+            }
+
+            if (!calculationError) {
+                double omegat = 2.0 * M_PI * m_actual_ftarget_hz_calc;
+                std::complex<double> ymn_tgt = (m_y12_calc + m_y21_calc) / 2.0;
+                std::complex<double> Zshunt1_tgt_complex, Zshunt2_tgt_complex, Zseries_tgt_complex;
+
+                if (std::abs(m_y11_calc + ymn_tgt) < 1e-12) { logOutputArea->append("Error (target freq): Denominator (y11_tgt + ymn_tgt) for Zshunt1 is near zero."); calculationError = true; }
+                if (!calculationError) Zshunt1_tgt_complex = 1.0 / (m_y11_calc + ymn_tgt);
+
+                if (std::abs(m_y22_calc + ymn_tgt) < 1e-12) { logOutputArea->append("Error (target freq): Denominator (y22_tgt + ymn_tgt) for Zshunt2 is near zero."); calculationError = true; }
+                if (!calculationError) Zshunt2_tgt_complex = 1.0 / (m_y22_calc + ymn_tgt);
+
+                if (std::abs(ymn_tgt) < 1e-12) { logOutputArea->append("Error (target freq): Denominator (ymn_tgt) for Zseries is near zero."); calculationError = true; }
+                if (!calculationError) Zseries_tgt_complex = -1.0 / ymn_tgt;
+
+                if (!calculationError) {
+                    Rseries_raw = Zseries_tgt_complex.real();
+                    if (omegat == 0.0 || Cser_low_raw <= 1e-18) {
+                        logOutputArea->append("Error (target freq): omegat or Cser_low is zero/invalid for Lseries calculation.");
+                        calculationError = true;
+                    } else {
+                        Lseries_raw = (Zseries_tgt_complex.imag() + 1.0 / (omegat * Cser_low_raw)) / omegat;
+                        logOutputArea->append(QString("Intermediate Lseries (raw): %1 H").arg(Lseries_raw));
+                        if (Lseries_raw <= 1e-15) { logOutputArea->append(QString("Warning (target freq): Calculated Lseries is non-positive or extremely small (%1 H).").arg(Lseries_raw)); calculationError = true; }
+                    }
+                }
+
+                if (!calculationError) {
+                     if (omegat == 0.0 || Cser_low_raw <= 1e-18) {
+                        logOutputArea->append("Error (target freq): omegat or Cser_low is zero/invalid for X_intermediate calculation.");
+                        calculationError = true;
+                     } else {
+                        double X_intermediate = omegat * Lseries_raw - 1.0 / (omegat * Cser_low_raw);
+                        logOutputArea->append(QString("Intermediate X: %1").arg(X_intermediate));
+                        if (std::abs(X_intermediate) < 1e-18 || omegat == 0.0) {
+                            logOutputArea->append("Error (target freq): Denominator (-X_intermediate * omegat) for Cmim is near zero.");
+                            calculationError = true;
+                        } else {
+                            Cmim_raw = 1.0 / (-X_intermediate * omegat);
+                            logOutputArea->append(QString("Intermediate Cmim (raw): %1 F").arg(Cmim_raw));
+                            if (Cmim_raw <= 1e-18) { logOutputArea->append(QString("Warning (target freq): Calculated Cmim is non-positive or extremely small (%1 F).").arg(Cmim_raw)); calculationError = true;}
+                        }
+                     }
+                }
+
+                if (!calculationError) {
+                    if (std::abs(Zshunt1_tgt_complex.imag()) < 1e-18 || omegat == 0.0) { logOutputArea->append("Error (target freq): Denom for Cshunt1 is near zero or imag part is zero."); calculationError = true;}
+                    else { Cshunt1_raw_calc = -1.0 / (omegat * Zshunt1_tgt_complex.imag()); if (Cshunt1_raw_calc <= 1e-18) {logOutputArea->append(QString("Warning (target freq): Cshunt1 non-positive/small (%1F).").arg(Cshunt1_raw_calc)); calculationError=true;}}
+
+                    if (std::abs(Zshunt2_tgt_complex.imag()) < 1e-18 || omegat == 0.0) { logOutputArea->append("Error (target freq): Denom for Cshunt2 is near zero or imag part is zero."); calculationError = true;}
+                    else { Cshunt2_raw_calc = -1.0 / (omegat * Zshunt2_tgt_complex.imag()); if (Cshunt2_raw_calc <= 1e-18) {logOutputArea->append(QString("Warning (target freq): Cshunt2 non-positive/small (%1F).").arg(Cshunt2_raw_calc)); calculationError=true;}}
+                }
+
+                if (!calculationError) {
+                     if (Rseries_raw < 0) {logOutputArea->append(QString("Warning: Calculated Rseries is negative (%1 Ohm). Using abs value.").arg(Rseries_raw)); Rseries_raw = std::abs(Rseries_raw);}
+
+                    cShunt1Val = formatComponentValue(Cshunt1_raw_calc, "C");
+                    lSeriesVal = formatComponentValue(Lseries_raw, "L");
+                    rSeriesVal = formatComponentValue(Rseries_raw, "R");
+                    cShunt2Val = formatComponentValue(Cshunt2_raw_calc, "C");
+                    cMimVal    = formatComponentValue(Cmim_raw, "C");
+                    usedCalculatedMiMValues = true;
+                    logOutputArea->append("Successfully used calculated component values for MiM-capacitor-pi.");
+                }
+            }
+            if (calculationError) {
+                 logOutputArea->append("Fallback to random values for MiM-capacitor-pi due to calculation errors or non-physical results.");
+            }
+        } else {
+            logOutputArea->append("Analysis results for both frequencies not available or not 2-port. Using random values for MiM-capacitor-pi.");
+        }
+
+        if (!usedCalculatedMiMValues) {
+            logOutputArea->append("Generating random values for MiM-capacitor-pi components.");
+            cShunt1Val = generateFormattedRandomValue(1e-12, 10e-6, "C");
+            lSeriesVal = generateFormattedRandomValue(1e-9, 100e-3, "L");
+            rSeriesVal = generateFormattedRandomValue(1.0, 100e3, "R");
+            cShunt2Val = generateFormattedRandomValue(1e-12, 10e-6, "C");
+            cMimVal    = generateFormattedRandomValue(1e-12, 10e-6, "C");
+        }
+
+        logOutputArea->append(QString("Final MiM-capacitor-pi values to be used in XML:"));
         logOutputArea->append(QString("  Cshunt1 (C1): %1").arg(cShunt1Val));
         logOutputArea->append(QString("  Lseries (L1): %1").arg(lSeriesVal));
         logOutputArea->append(QString("  Rseries (R2): %1").arg(rSeriesVal));
@@ -425,10 +564,8 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
             "<320 160 330 160 \"\" 0 0 0 \"\">\n"
             "<220 160 260 160 \"\" 0 0 0 \"\">\n"
             "</Wires>\n"
-            "<Diagrams>\n"
-            "</Diagrams>\n"
-            "<Paintings>\n"
-            "</Paintings>\n"
+            "<Diagrams>\n</Diagrams>\n"
+            "<Paintings>\n</Paintings>\n"
         ).arg(cShunt1Val)
          .arg(lSeriesVal)
          .arg(rSeriesVal)
@@ -464,18 +601,20 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
     bool conversionOk;
     double targetFreqValue = targetFreqStr.toDouble(&conversionOk);
 
+    m_analysisResultsAvailable = false;
+    m_lowFreqAnalysisResultsAvailable = false;
+
     if (!conversionOk) {
         qWarning() << "Invalid target frequency input:" << targetFreqStr;
         QMessageBox::warning(this, tr("Invalid Input"), tr("Target frequency is not a valid number."));
         logOutputArea->append("Error: Invalid target frequency input.");
-        m_analysisResultsAvailable = false; return;
+        return;
     }
-
     if (m_fullTouchstoneData.isEmpty() || !m_fullTouchstoneData.contains("frequency") || m_fullTouchstoneData["frequency"].isEmpty()) {
         qWarning() << "No data loaded to analyze.";
         QMessageBox::information(this, tr("No Data"), tr("Please load a Touchstone file first."));
         logOutputArea->append("Info: No data loaded to analyze.");
-        m_analysisResultsAvailable = false; return;
+        return;
     }
 
     double f_target1_GHz = targetFreqValue;
@@ -491,7 +630,7 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
     if (frequencies.isEmpty()) {
         qWarning() << "Frequency data list is present but empty.";
         logOutputArea->append("Error: Frequency data list is empty in loaded file.");
-        m_analysisResultsAvailable = false; return;
+        return;
     }
 
     auto findClosestFreqIndex = [&](double targetFreq) -> int {
@@ -510,13 +649,13 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
     int closestIndex1 = findClosestFreqIndex(f_target1_GHz);
     int closestIndex2 = findClosestFreqIndex(f_target2_GHz);
 
-    m_analysisResultsAvailable = false;
-    m_analyzedNumPorts = 0;
+    int numPortsInFile = 0;
     if (m_fullTouchstoneData.contains("n_ports") && !m_fullTouchstoneData["n_ports"].isEmpty()) {
-        m_analyzedNumPorts = static_cast<int>(m_fullTouchstoneData["n_ports"].first());
+        numPortsInFile = static_cast<int>(m_fullTouchstoneData["n_ports"].first());
     }
+    m_analyzedNumPorts = numPortsInFile;
 
-    logOutputArea->append("--- Analysis Results ---");
+    logOutputArea->append(QString("--- Analysis Results (File has %1 port(s)) ---").arg(numPortsInFile));
 
     if (closestIndex1 != -1) {
         double actualFreq1_GHz = frequencies.at(closestIndex1);
@@ -529,21 +668,19 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
 
         std::complex<double> y11, y12, y21, y22;
         double z0_point1;
-        int numPorts_point1;
-        bool y_calc_success = calculateYMatrix(closestIndex1, y11, y12, y21, y22, z0_point1, numPorts_point1);
+        int numPorts_point1_check;
+        bool y_calc_success1 = calculateYMatrix(closestIndex1, y11, y12, y21, y22, z0_point1, numPorts_point1_check);
 
-        if (y_calc_success && numPorts_point1 == 2 && !std::isnan(y11.real())) {
-            m_y11_calc = y11;
-            m_y12_calc = y12;
-            m_y21_calc = y21;
-            m_y22_calc = y22;
+        if (y_calc_success1 && numPorts_point1_check == 2 && !std::isnan(y11.real())) {
+            m_y11_calc = y11; m_y12_calc = y12; m_y21_calc = y21; m_y22_calc = y22;
             m_Z0_calc = z0_point1;
             m_actual_ftarget_hz_calc = actualFreq1_GHz * 1e9;
             m_analysisResultsAvailable = true;
-            m_analyzedNumPorts = numPorts_point1;
-            logOutputArea->append("Stored Y-parameters, Z0, and frequency from primary target for potential synthesis.");
-        } else if (numPorts_point1 == 2 && (!y_calc_success || std::isnan(y11.real())) ) {
-             logOutputArea->append("Y-parameters for primary target are singular or could not be calculated. Cannot use for synthesis.");
+            logOutputArea->append("Stored Y-parameters, Z0, and frequency from PRIMARY target for potential synthesis.");
+        } else if (numPorts_point1_check == 2 && (!y_calc_success1 || std::isnan(y11.real())) ) {
+             logOutputArea->append("Y-parameters for PRIMARY target are singular or could not be calculated. Cannot use for synthesis.");
+        } else if (numPorts_point1_check != 2 && numPortsInFile == 2) {
+             logOutputArea->append("Y-Matrix calculation for PRIMARY target indicated not 2-port, though file is 2-port. Check data integrity.");
         }
 
         calculateAndLogZMatrixForFrequencyPoint(closestIndex1, actualFreq1_GHz);
@@ -555,34 +692,59 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
 
     logOutputArea->append("");
 
-    bool process_f2 = true;
+    bool process_f2_logging = true;
     if (closestIndex2 == closestIndex1 && std::abs(f_target1_GHz - f_target2_GHz) < 1e-12) {
-        logOutputArea->append(QString("Secondary target frequency is identical to primary; results already shown."));
-        process_f2 = false;
+        logOutputArea->append(QString("Secondary target frequency is effectively identical to primary; results already processed and shown."));
+        if (m_analysisResultsAvailable) {
+             m_y11_calc_low = m_y11_calc; m_y12_calc_low = m_y12_calc;
+             m_y21_calc_low = m_y21_calc; m_y22_calc_low = m_y22_calc;
+             m_Z0_calc_low = m_Z0_calc;
+             m_actual_flow_hz_calc = m_actual_ftarget_hz_calc;
+             m_lowFreqAnalysisResultsAvailable = true;
+             logOutputArea->append("Copied primary target results to secondary low-frequency results as targets were identical.");
+        } else {
+            m_lowFreqAnalysisResultsAvailable = false;
+        }
+        process_f2_logging = false;
     }
 
-    if (closestIndex2 != -1 && process_f2) {
+    if (closestIndex2 != -1 && process_f2_logging) {
         double actualFreq2_GHz = frequencies.at(closestIndex2);
-         if (closestIndex2 == closestIndex1 && std::abs(frequencies.at(closestIndex1) - actualFreq2_GHz) > 1e-9 ){
-            logOutputArea->append(QString("Data for Secondary Target (Closest to %1 GHz is %2 GHz, Index: %3) - Note: Same actual frequency point as primary target.")
-                .arg(QString::number(f_target2_GHz, 'g', 10))
-                .arg(QString::number(actualFreq2_GHz, 'g', 10))
-                .arg(closestIndex2));
-            logSParametersForFrequencyPoint(closestIndex2, actualFreq2_GHz);
-            calculateAndLogZMatrixForFrequencyPoint(closestIndex2, actualFreq2_GHz);
-            calculateAndLogYMatrixForFrequencyPoint(closestIndex2, actualFreq2_GHz);
+        logOutputArea->append(QString("Data for Secondary Target (Closest to %1 GHz is %2 GHz, Index: %3)")
+            .arg(QString::number(f_target2_GHz, 'g', 10))
+            .arg(QString::number(actualFreq2_GHz, 'g', 10))
+            .arg(closestIndex2));
 
-        } else if (closestIndex2 != closestIndex1) {
-             logOutputArea->append(QString("Data for Secondary Target (Closest to %1 GHz is %2 GHz, Index: %3)")
-                .arg(QString::number(f_target2_GHz, 'g', 10))
-                .arg(QString::number(actualFreq2_GHz, 'g', 10))
-                .arg(closestIndex2));
-            logSParametersForFrequencyPoint(closestIndex2, actualFreq2_GHz);
-            calculateAndLogZMatrixForFrequencyPoint(closestIndex2, actualFreq2_GHz);
-            calculateAndLogYMatrixForFrequencyPoint(closestIndex2, actualFreq2_GHz);
+        logSParametersForFrequencyPoint(closestIndex2, actualFreq2_GHz);
+
+        std::complex<double> y11_low, y12_low, y21_low, y22_low;
+        double z0_point2;
+        int numPorts_point2_check;
+        bool y_calc_success2 = calculateYMatrix(closestIndex2, y11_low, y12_low, y21_low, y22_low, z0_point2, numPorts_point2_check);
+
+        if (y_calc_success2 && numPorts_point2_check == 2 && !std::isnan(y11_low.real())) {
+            m_y11_calc_low = y11_low; m_y12_calc_low = y12_low;
+            m_y21_calc_low = y21_low; m_y22_calc_low = y22_low;
+            m_Z0_calc_low = z0_point2;
+            m_actual_flow_hz_calc = actualFreq2_GHz * 1e9;
+            m_lowFreqAnalysisResultsAvailable = true;
+            logOutputArea->append("Stored Y-parameters, Z0, and frequency from SECONDARY (low-freq) target for potential synthesis.");
+        } else if (numPorts_point2_check == 2 && (!y_calc_success2 || std::isnan(y11_low.real())) ) {
+             logOutputArea->append("Y-parameters for SECONDARY (low-freq) target are singular or could not be calculated.");
+             m_lowFreqAnalysisResultsAvailable = false;
+        } else if (numPorts_point2_check != 2 && numPortsInFile == 2) {
+             logOutputArea->append("Y-Matrix calculation for SECONDARY (low-freq) target indicated not 2-port, though file is 2-port. Check data integrity.");
+             m_lowFreqAnalysisResultsAvailable = false;
+        } else {
+            m_lowFreqAnalysisResultsAvailable = false;
         }
-    } else if (process_f2) {
+
+        calculateAndLogZMatrixForFrequencyPoint(closestIndex2, actualFreq2_GHz);
+        calculateAndLogYMatrixForFrequencyPoint(closestIndex2, actualFreq2_GHz);
+
+    } else if (process_f2_logging) {
         logOutputArea->append(QString("Could not find a closest frequency for the secondary target %1 GHz.").arg(QString::number(f_target2_GHz, 'g', 10)));
+        m_lowFreqAnalysisResultsAvailable = false;
     }
 }
 
