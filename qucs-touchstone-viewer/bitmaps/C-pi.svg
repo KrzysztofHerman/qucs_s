@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   version="1.1"
+   style="font-size:13.3333px;overflow:visible"
+   viewBox="111.386 -225.74811 310 210"
+   id="svg2941"
+   sodipodi:docname="C-pi.svg"
+   width="310"
+   height="210"
+   inkscape:version="1.2.2 (732a01da63, 2022-12-09)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:xlink="http://www.w3.org/1999/xlink"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <sodipodi:namedview
+     id="namedview2943"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="1.5512176"
+     inkscape:cx="10.959133"
+     inkscape:cy="67.688764"
+     inkscape:window-width="1920"
+     inkscape:window-height="974"
+     inkscape:window-x="-11"
+     inkscape:window-y="-11"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg2941" />
+  <defs
+     id="defs2855">
+    <symbol
+       id="path_tline">
+      <g
+         fill="none"
+         stroke="currentStroke"
+         stroke-miterlimit="10"
+         stroke-width="0.4"
+         id="g2830">
+        <g
+           stroke-width="1.06267"
+           id="g2826">
+          <path
+             d="M 29.10476,0.53135 H 3.70612 c -1.7534,0 -3.17476,3.55349 -3.17476,7.93703 0,4.38354 1.42136,7.93704 3.17476,7.93704 h 25.39864 c 1.7534,0 3.17476,-3.55349 3.17476,-7.93704 0,-4.38355 -1.42136,-7.93703 -3.17476,-7.93703"
+             id="path2822" />
+          <path
+             d="m 29.10476,0.53135 c -1.7534,0 -3.17476,3.55349 -3.17476,7.93703 0,4.38354 1.42136,7.93704 3.17476,7.93704"
+             id="path2824" />
+        </g>
+        <path
+           stroke-width="0.53134"
+           d="m 29.10476,8.46838 h 3.17476"
+           id="path2828" />
+      </g>
+    </symbol>
+    <symbol
+       id="node_ground">
+      <g
+         fill="none"
+         stroke="currentStroke"
+         stroke-miterlimit="10"
+         stroke-width="0.4"
+         id="g2837">
+        <path
+           stroke-width="0.53134"
+           d="m 8.46839,0.30374 v 15.8739"
+           id="path2833" />
+        <path
+           stroke-width="1.06267"
+           d="M 0.53135,16.17763 H 16.40542 M 3.17716,18.82326 h 10.58245 m -8.59829,2.6458 h 6.61413"
+           id="path2835" />
+      </g>
+    </symbol>
+    <symbol
+       id="path_european-resistor">
+      <g
+         fill="none"
+         stroke="currentStroke"
+         stroke-miterlimit="10"
+         stroke-width="0.4"
+         id="g2842">
+        <path
+           stroke-width="1.06267"
+           d="M 0.53135,0.53135 H 42.86197 V 16.40542 H 0.53135 Z"
+           id="path2840" />
+      </g>
+    </symbol>
+    <symbol
+       id="path_cute-inductor">
+      <g
+         fill="none"
+         stroke="currentStroke"
+         stroke-miterlimit="10"
+         stroke-width="0.4"
+         id="g2847">
+        <path
+           stroke-linejoin="bevel"
+           stroke-width="1.06267"
+           d="m 0.53136,8.46839 c 0,-4.38355 2.17963,-7.93704 4.8684,-7.93704 2.68877,0 4.8684,3.55349 4.8684,7.93704 0,2.19165 -0.88833,3.9683 -1.98417,3.9683 -1.09582,0 -1.98414,-1.77665 -1.98414,-3.9683 0,-4.38355 2.17962,-7.93704 4.8684,-7.93704 2.68878,0 4.86839,3.55349 4.86839,7.93704 0,2.19165 -0.88832,3.9683 -1.98416,3.9683 -1.09582,0 -1.98415,-1.77665 -1.98415,-3.9683 0,-4.38355 2.17963,-7.93704 4.8684,-7.93704 2.68877,0 4.8684,3.55349 4.8684,7.93704 0,2.19165 -0.88833,3.9683 -1.98416,3.9683 -1.09583,0 -1.98415,-1.77665 -1.98415,-3.9683 0,-4.38355 2.17963,-7.93704 4.8684,-7.93704 2.68877,0 4.8684,3.55349 4.8684,7.93704 0,2.19165 -0.88834,3.9683 -1.98417,3.9683 -1.09583,0 -1.98414,-1.77665 -1.98414,-3.9683 0,-4.38355 2.17962,-7.93704 4.8684,-7.93704 2.68878,0 4.86839,3.55349 4.86839,7.93704"
+           id="path2845" />
+      </g>
+    </symbol>
+    <symbol
+       id="path_capacitor">
+      <g
+         fill="none"
+         stroke="currentStroke"
+         stroke-miterlimit="10"
+         stroke-width="0.4"
+         id="g2852">
+        <path
+           stroke-width="1.06267"
+           d="M 0.53137,0.53136 V 32.27952 M 11.11381,0.53136 v 31.74816"
+           id="path2850" />
+      </g>
+    </symbol>
+  </defs>
+  <g
+     class="draggable"
+     id="g2867">
+    <use
+       xlink:href="#node_ground"
+       fill="#ffffff"
+       stroke="#000000"
+       transform="translate(142.71261,-38.09874)"
+       style="color:#000000"
+       id="use2865" />
+  </g>
+  <g
+     class="draggable"
+     id="g2871">
+    <use
+       xlink:href="#node_ground"
+       fill="#ffffff"
+       stroke="#000000"
+       transform="translate(369.48461,-38.09874)"
+       style="color:#000000"
+       id="use2869" />
+  </g>
+  <g
+     class=""
+     id="g2879">
+    <use
+       xlink:href="#path_european-resistor"
+       fill="#ffffff"
+       stroke="#000000"
+       style="color:#000000"
+       transform="translate(309.01172,-216.3424)"
+       class="draggable"
+       id="use2873" />
+    <line
+       x1="292.91339"
+       y1="-207.87401"
+       x2="309.54306"
+       y2="-207.87401"
+       fill="none"
+       stroke-width="0.5"
+       stroke="#000000"
+       id="line2875" />
+    <line
+       x1="368.50339"
+       y1="-207.87401"
+       x2="351.87372"
+       y2="-207.87401"
+       fill="none"
+       stroke-width="0.5"
+       stroke="#000000"
+       id="line2877" />
+  </g>
+  <g
+     class=""
+     id="g2887">
+    <use
+       xlink:href="#path_cute-inductor"
+       fill="#ffffff"
+       stroke="#000000"
+       style="color:#000000"
+       transform="translate(238.18156,-216.12988)"
+       class="draggable"
+       id="use2881" />
+    <line
+       x1="217.32283"
+       y1="-207.87401"
+       x2="239.24425"
+       y2="-207.87401"
+       fill="none"
+       stroke-width="0.5"
+       stroke="#000000"
+       id="line2883" />
+    <line
+       x1="292.91385"
+       y1="-207.87401"
+       x2="270.9924"
+       y2="-207.87401"
+       fill="none"
+       stroke-width="0.5"
+       stroke="#000000"
+       id="line2885" />
+  </g>
+  <g
+     class=""
+     id="g2895">
+    <use
+       xlink:href="#path_capacitor"
+       fill="#ffffff"
+       stroke="#000000"
+       style="color:#000000"
+       transform="rotate(90,124.49998,43.086563)"
+       class="draggable"
+       id="use2889" />
+    <line
+       x1="151.18111"
+       y1="-113.38583"
+       x2="151.18111"
+       y2="-80.88205"
+       fill="none"
+       stroke-width="0.5"
+       stroke="#000000"
+       id="line2891" />
+    <line
+       x1="151.18111"
+       y1="-37.795826"
+       x2="151.18111"
+       y2="-70.299606"
+       fill="none"
+       stroke-width="0.5"
+       stroke="#000000"
+       id="line2893" />
+  </g>
+  <g
+     class=""
+     id="g2903">
+    <use
+       xlink:href="#path_capacitor"
+       fill="#ffffff"
+       stroke="#000000"
+       style="color:#000000"
+       transform="rotate(90,237.88581,156.47239)"
+       class="draggable"
+       id="use2897" />
+    <line
+       x1="377.95276"
+       y1="-113.38583"
+       x2="377.95276"
+       y2="-80.88205"
+       fill="none"
+       stroke-width="0.5"
+       stroke="#000000"
+       id="line2899" />
+    <line
+       x1="377.95276"
+       y1="-37.795826"
+       x2="377.95276"
+       y2="-70.299606"
+       fill="none"
+       stroke-width="0.5"
+       stroke="#000000"
+       id="line2901" />
+  </g>
+  <g
+     id="g2907">
+    <polyline
+       points="0,4.724500000000006 0,-4.724500000000006"
+       fill="none"
+       stroke-dasharray="0.4pt, 0pt"
+       stroke-opacity="1"
+       stroke-width="0.533333"
+       stroke="#000000"
+       transform="translate(377.953,-193.7005)"
+       id="polyline2905" />
+  </g>
+  <g
+     id="g2911">
+    <polyline
+       points="0,-4.724500000000006 0,4.724499999999978"
+       fill="none"
+       stroke-dasharray="0.4pt, 0pt"
+       stroke-opacity="1"
+       stroke-width="0.533333"
+       stroke="#000000"
+       transform="translate(377.953,-203.1495)"
+       id="polyline2909" />
+  </g>
+  <g
+     id="g2915">
+    <polyline
+       points="18.897500000000008,0 -18.897500000000008,0"
+       fill="none"
+       stroke-dasharray="0.4pt, 0pt"
+       stroke-opacity="1"
+       stroke-width="0.533333"
+       stroke="#000000"
+       transform="translate(132.2835,-207.874)"
+       id="polyline2913" />
+  </g>
+  <g
+     class=""
+     id="g2919">
+    <polyline
+       points="-23.622031496063016,-0.000007874015736319961 23.622031496063016,-0.000007874015736319961 23.622031496063016,0.000007874015736319961"
+       fill="none"
+       stroke-dasharray="0.4pt, 0pt"
+       stroke-opacity="1"
+       stroke-width="0.533333"
+       stroke="#000000"
+       transform="translate(392.12597,-207.87401)"
+       id="polyline2917" />
+  </g>
+  <g
+     class=""
+     id="g2927">
+    <use
+       xlink:href="#path_capacitor"
+       fill="#ffffff"
+       stroke="#000000"
+       style="color:#000000"
+       transform="rotate(180,97.399622,-95.734288)"
+       class="draggable"
+       id="use2921" />
+    <line
+       x1="226.77165"
+       y1="-207.87401"
+       x2="194.26787"
+       y2="-207.87401"
+       fill="none"
+       stroke-width="0.5"
+       stroke="#000000"
+       id="line2923" />
+    <line
+       x1="151.18166"
+       y1="-207.87401"
+       x2="183.68544"
+       y2="-207.87401"
+       fill="none"
+       stroke-width="0.5"
+       stroke="#000000"
+       id="line2925" />
+  </g>
+  <g
+     id="g2931">
+    <polyline
+       points="0,-47.24409448818898 0,47.24409448818895"
+       fill="none"
+       stroke-dasharray="0.4pt, 0pt"
+       stroke-opacity="1"
+       stroke-width="0.533333"
+       stroke="#000000"
+       transform="translate(151.1811,-160.62992)"
+       id="polyline2929" />
+  </g>
+  <g
+     id="g2935">
+    <polyline
+       points="0,4.7244094488189035 0,-4.7244094488189035"
+       fill="none"
+       stroke-dasharray="0.4pt, 0pt"
+       stroke-opacity="1"
+       stroke-width="0.533333"
+       stroke="#000000"
+       transform="translate(377.95276,-108.66142)"
+       id="polyline2933" />
+  </g>
+  <g
+     id="g2939">
+    <polyline
+       points="0,-37.79527559055117 0,37.79527559055117"
+       fill="none"
+       stroke-dasharray="0.4pt, 0pt"
+       stroke-opacity="1"
+       stroke-width="0.533333"
+       stroke="#000000"
+       transform="translate(377.95276,-151.1811)"
+       id="polyline2937" />
+  </g>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:13.3333px;font-family:sans-serif;overflow:visible;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+     x="308.43466"
+     y="-176.10936"
+     id="text349-6"><tspan
+       sodipodi:role="line"
+       id="tspan347-9"
+       x="308.43466"
+       y="-176.10936"
+       style="font-size:13.3333px">R<tspan
+   style="font-size:65%;baseline-shift:sub"
+   id="tspan455-7">series</tspan></tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:13.3333px;font-family:sans-serif;overflow:visible;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+     x="172.06601"
+     y="-71.543617"
+     id="text349-96"><tspan
+       sodipodi:role="line"
+       id="tspan347-0"
+       x="172.06601"
+       y="-71.543617"
+       style="font-size:13.3333px">C<tspan
+   style="font-size:65%;baseline-shift:sub"
+   id="tspan455-4">shunt1</tspan></tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:13.3333px;font-family:sans-serif;overflow:visible;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+     x="172.77559"
+     y="-175.9951"
+     id="text349-96-9"><tspan
+       sodipodi:role="line"
+       id="tspan347-0-4"
+       x="172.77559"
+       y="-175.9951"
+       style="font-size:13.3333px">C<tspan
+   style="font-size:65%;baseline-shift:sub"
+   id="tspan455-4-6">MiM</tspan></tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:13.3333px;font-family:sans-serif;overflow:visible;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+     x="318.98804"
+     y="-71.543617"
+     id="text349-96-0"><tspan
+       sodipodi:role="line"
+       id="tspan347-0-8"
+       x="318.98804"
+       y="-71.543617"
+       style="font-size:13.3333px">C<tspan
+   style="font-size:65%;baseline-shift:sub"
+   id="tspan455-4-8">shunt2</tspan></tspan></text>
+  <text
+     xml:space="preserve"
+     style="font-style:normal;font-weight:normal;font-size:13.3333px;font-family:sans-serif;overflow:visible;fill:#000000;fill-opacity:1;stroke:none;stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;stroke-opacity:1"
+     x="237.97006"
+     y="-176.10936"
+     id="text349-96-5"><tspan
+       sodipodi:role="line"
+       id="tspan347-0-53"
+       x="237.97006"
+       y="-176.10936"
+       style="font-size:13.3333px">L<tspan
+   style="font-size:65%;baseline-shift:sub"
+   id="tspan455-4-2">series</tspan></tspan></text>
+  <circle
+     style="font-size:13.3333px;overflow:visible;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-dasharray:none;stroke-opacity:0.659292"
+     id="path799-6"
+     cx="415.74802"
+     cy="-207.60735"
+     r="3" />
+  <circle
+     style="font-size:13.3333px;overflow:visible;fill:#000000;fill-opacity:1;stroke:#000000;stroke-width:0;stroke-dasharray:none;stroke-opacity:0.659292"
+     id="path799-6-1"
+     cx="114.54427"
+     cy="-208.14067"
+     r="3" />
+</svg>
