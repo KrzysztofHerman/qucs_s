@@ -1,13 +1,15 @@
 #include "qucstouchstoneviewer.h"
-#include <QHeaderView> // Required for QHeaderView
-#include <QtMath> // For qDegreesToRadians and qRadiansToDegrees if needed, M_PI is in cmath
-#include <QTemporaryFile> // Required for QTemporaryFile
-#include <QLabel> // Required for QLabel (used in createWidgets)
-#include <QClipboard> // For accessing the system clipboard
-#include <QApplication> // Required for QApplication::clipboard()
+#include <QHeaderView>
+#include <QtMath>
+#include <QTemporaryFile>
+#include <QLabel>
+#include <QClipboard>
+#include <QApplication>
 #include <QMessageBox>
 #include <QLineEdit>
 #include <QDoubleValidator>
+#include <QtSvgWidgets/QSvgWidget>
+#include <QSvgRenderer> // Added for QSvgWidget::renderer()
 
 #include <random>
 #include <vector>
@@ -33,13 +35,12 @@ QucsTouchstoneViewer::QucsTouchstoneViewer(QWidget *parent)
     m_Z0_calc = 50.0;
     m_y11_calc = m_y12_calc = m_y21_calc = m_y22_calc = std::complex<double>(0.0, 0.0);
 
-    // Initialize new low frequency members
     m_lowFreqAnalysisResultsAvailable = false;
     m_actual_flow_hz_calc = 0.0;
     m_Z0_calc_low = 50.0;
     m_y11_calc_low = m_y12_calc_low = m_y21_calc_low = m_y22_calc_low = std::complex<double>(0.0, 0.0);
 
-    S_logOutputArea = logOutputArea;
+    S_logOutputArea = logOutputArea; // logOutputArea is created in createWidgets
     qInstallMessageHandler(qtMessageHandler);
 
     qDebug() << "Touchstone Viewer initialized. Logging started.";
@@ -58,26 +59,22 @@ void QucsTouchstoneViewer::createWidgets()
     QWidget *controlsWidget = new QWidget();
     QGridLayout *controlsLayout = new QGridLayout(controlsWidget);
 
-    // File operations (Row 0)
     openButton = new QPushButton(tr("Select Touchstone File"), this);
     connect(openButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::openFile);
-    loadInternalDataButton = new QPushButton(tr("Load Internal Test Data"), this);
-    connect(loadInternalDataButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::loadInternalTestData);
-    controlsLayout->addWidget(openButton, 0, 0);
-    controlsLayout->addWidget(loadInternalDataButton, 0, 1);
+    controlsLayout->addWidget(openButton, 0, 0, 1, 2);
 
-    // Network Synthesis controls (Row 1)
     QLabel *networkTypeLabel = new QLabel(tr("Network Type:"), this);
     networkTypeComboBox = new QComboBox(this);
     networkTypeComboBox->addItem(tr("Inductor-pi"));
     networkTypeComboBox->addItem(tr("MiM-capacitor-pi"));
+    connect(networkTypeComboBox, SIGNAL(currentTextChanged(const QString&)), this, SLOT(onNetworkTypeChanged(const QString&)));
+
     synthesizeButton = new QPushButton(tr("Synthesize"), this);
     connect(synthesizeButton, &QPushButton::clicked, this, &QucsTouchstoneViewer::onSynthesizeClicked);
     controlsLayout->addWidget(networkTypeLabel, 1, 0);
     controlsLayout->addWidget(networkTypeComboBox, 1, 1);
     controlsLayout->addWidget(synthesizeButton, 1, 2);
 
-    // Target Frequency controls (Row 2)
     QLabel *targetFreqLabel = new QLabel(tr("Target Frequency:"), this);
     targetFrequencyInput = new QLineEdit("1", this);
     QDoubleValidator *freqValidator = new QDoubleValidator(this);
@@ -104,22 +101,67 @@ void QucsTouchstoneViewer::createWidgets()
     controlsLayout->addLayout(targetFreqLayout, 2, 1);
     controlsLayout->addWidget(analyzeFrequencyButton, 2, 2);
 
-    dataTable = new QTableWidget(this);
-    dataTable->setColumnCount(6);
-    QStringList headers = {"Frequency (GHz)", "S11 (dB)", "S12 (dB)", "S21 (dB)", "S22 (dB)", "Z0 (Ohm)"};
-    dataTable->setHorizontalHeaderLabels(headers);
-    dataTable->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+    networkDisplayWidget = new QSvgWidget(this);
+    networkDisplayWidget->setFixedSize(310, 210);
 
-    logOutputArea = new QTextEdit(this);
+    logOutputArea = new QTextEdit(this); // logOutputArea must be created before S_logOutputArea is used in constructor
     logOutputArea->setReadOnly(true);
     logOutputArea->setFontFamily("monospace");
     logOutputArea->setMinimumHeight(150);
 
     mainLayout->addWidget(controlsWidget);
-    mainLayout->addWidget(dataTable, 1);
-    mainLayout->addWidget(logOutputArea, 0);
+    mainLayout->addWidget(networkDisplayWidget, 0, Qt::AlignCenter);
+    mainLayout->addWidget(logOutputArea, 1);
 
     setCentralWidget(centralWidget);
+
+    // Call after all UI elements are set up
+    if (networkTypeComboBox && networkDisplayWidget) {
+       onNetworkTypeChanged(networkTypeComboBox->currentText());
+    } else {
+       qWarning() << "Could not set initial image as networkTypeComboBox or networkDisplayWidget is null in createWidgets.";
+    }
+}
+
+void QucsTouchstoneViewer::onNetworkTypeChanged(const QString& newType)
+{
+    QString imagePath = "";
+    if (logOutputArea) logOutputArea->append(QString("Network type changed to: %1").arg(newType));
+    qDebug() << "Network type changed to:" << newType;
+
+    if (newType == tr("Inductor-pi")) {
+        imagePath = ":/bitmaps/L-pi.svg";
+    } else if (newType == tr("MiM-capacitor-pi")) {
+        imagePath = ":/bitmaps/C-pi.svg";
+    }
+
+    if (networkDisplayWidget) {
+        if (!imagePath.isEmpty()) {
+            if (networkDisplayWidget->load(imagePath)) {
+                if (logOutputArea) logOutputArea->append(QString("Displayed image: %1").arg(imagePath));
+                qDebug() << "Successfully loaded SVG:" << imagePath;
+            } else {
+                QSvgRenderer *renderer = networkDisplayWidget->renderer();
+                QString rendererError = "Unknown";
+                if (renderer && !renderer->isValid()){
+                    rendererError = "Renderer reports invalid SVG content or load error.";
+                } else if (!renderer) {
+                    rendererError = "No SVG renderer available/loaded for QSvgWidget.";
+                } else {
+                    rendererError = "Load failed for unknown reasons (renderer seems valid). Check resource path and SVG file integrity.";
+                }
+                if (logOutputArea) logOutputArea->append(QString("Error: Could not load SVG image: %1. Details: %2").arg(imagePath).arg(rendererError));
+                qDebug() << "Failed to load SVG:" << imagePath << "Details:" << rendererError;
+                networkDisplayWidget->load(QString());
+            }
+        } else {
+            if (logOutputArea) logOutputArea->append(QString("No image defined for network type: '%1'. Clearing display.").arg(newType));
+            qDebug() << "No SVG defined for type:" << newType << ". Clearing widget.";
+            networkDisplayWidget->load(QString());
+        }
+    } else {
+        qWarning() << "networkDisplayWidget is null in onNetworkTypeChanged.";
+    }
 }
 
 void QucsTouchstoneViewer::openFile()
@@ -138,13 +180,14 @@ void QucsTouchstoneViewer::openFile()
 
         if (!m_fullTouchstoneData.isEmpty() && m_fullTouchstoneData.contains("frequency") && !m_fullTouchstoneData["frequency"].isEmpty()) {
             m_isTargetFrequencyApplied = false;
-            displayData();
-            logOutputArea->append(QString("File loaded: %1. Displaying initial data.").arg(QFileInfo(filePath).fileName()));
+            // displayData(); // No longer calling this as table is removed
+             if (logOutputArea) logOutputArea->append("Data loaded. Table display is disabled.");
+            logOutputArea->append(QString("File loaded: %1.").arg(QFileInfo(filePath).fileName()));
         } else {
             qWarning() << "readTouchstoneFile returned empty or invalid data for:" << filePath;
             m_fullTouchstoneData.clear();
             m_isTargetFrequencyApplied = false;
-            dataTable->setRowCount(0);
+            if(logOutputArea) logOutputArea->append("Error loading file.");
             QMessageBox::warning(this, tr("Error"), tr("Could not read or parse valid data from the Touchstone file. Check logs for details."));
         }
     }
@@ -171,7 +214,7 @@ void QucsTouchstoneViewer::qtMessageHandler(QtMsgType type, const QMessageLogCon
         break;
     }
 
-    if (S_logOutputArea) {
+    if (S_logOutputArea) { // Check if S_logOutputArea is initialized
          QMetaObject::invokeMethod(S_logOutputArea, "append", Qt::QueuedConnection, Q_ARG(QString, txt));
     }
 
@@ -186,61 +229,7 @@ void QucsTouchstoneViewer::qtMessageHandler(QtMsgType type, const QMessageLogCon
     }
 }
 
-void QucsTouchstoneViewer::loadInternalTestData() {
-    if(logOutputArea) {
-        logOutputArea->clear();
-    }
-    qDebug() << "Loading internal S1P test data...";
-    QString internalData =
-        "# HZ S RI R 50\n"
-        "1.00000000000000000000e+09 -8.46515980894904096488e-01 +3.82129464747608060815e-01\n"
-        "1.04500000000000000000e+09 +7.66950422926827468650e-01 +5.06598385795697825351e-01\n"
-        "1.09000000000000000000e+09 -7.40092995892248639578e-02 -9.18543147793533520939e-01\n"
-        "1.13500000000000000000e+09 -7.84313619526967986673e-01 +4.87399953901208826679e-01\n"
-        "1.18000000000000000000e+09 +8.27597192619389798729e-01 +3.86355153329461353806e-01\n"
-        "1.22500000000000000000e+09 -1.98965544753984008297e-01 -8.95226442863656934890e-01\n"
-        "1.27000000000000000000e+09 -7.08973922134685685670e-01 +5.83501861798306320495e-01\n"
-        "1.31500000000000000000e+09 +8.70128641781341860550e-01 +2.58949445769425745656e-01\n"
-        "1.36000000000000000000e+09 -3.18042669221875073937e-01 -8.55715355687028722542e-01\n"
-        "1.40500000000000000000e+09 -6.21653232228549512683e-01 +6.68814615271009271780e-01\n"
-        "1.45000000000000000000e+09 +8.93654065574718714515e-01 +1.27182133467183100528e-01\n"
-        "1.49500000000000000000e+09 -4.29312049976689813491e-01 -8.01204252693833773868e-01\n"
-        "1.54000000000000000000e+09 -5.23720562306002390685e-01 +7.41826867193043137938e-01\n"
-        "1.58500000000000000000e+09 +8.97757786263793877701e-01 -6.01937001568708836274e-03\n"
-        "1.63000000000000000000e+09 -5.31064362360373354299e-01 -7.33080849935221268154e-01\n"
-        "1.67500000000000000000e+09 -4.16754460109290847392e-01 +8.01166944135256797743e-01\n"
-        "1.72000000000000000000e+09 +8.82516757194892864646e-01 -1.37695855400943534264e-01\n"
-        "1.76500000000000000000e+09 -6.21818176421991219982e-01 -6.52887024248738345733e-01\n"
-        "1.81000000000000000000e+09 -3.02536121210643660362e-01 +8.45636179240584429095e-01\n";
-
-    QTemporaryFile tempFile("test_internal_s1p_XXXXXX.s1p");
-    if (tempFile.open()) {
-        QTextStream out(&tempFile);
-        out << internalData;
-        tempFile.close();
-        qDebug() << "Temporary internal S1P test file created at:" << tempFile.fileName();
-
-        m_fullTouchstoneData = readTouchstoneFile(tempFile.fileName());
-
-        m_analysisResultsAvailable = false;
-        m_analyzedNumPorts = 0;
-        m_lowFreqAnalysisResultsAvailable = false;
-
-        if (!m_fullTouchstoneData.isEmpty() && m_fullTouchstoneData.contains("frequency") && !m_fullTouchstoneData["frequency"].isEmpty()) {
-            m_isTargetFrequencyApplied = false;
-            displayData();
-        } else {
-            qWarning() << "Could not read or parse valid data from the internal S1P test data.";
-            m_fullTouchstoneData.clear();
-            m_isTargetFrequencyApplied = false;
-            dataTable->setRowCount(0);
-            QMessageBox::warning(this, tr("Internal S1P Test Error"), tr("Could not read or parse valid data from the internal S1P test data. Check logs."));
-        }
-    } else {
-        qWarning() << "Could not create temporary file for internal S1P test data.";
-        QMessageBox::critical(this, tr("Internal S1P Test Error"), tr("Could not create temporary file for internal S1P test data."));
-    }
-}
+// loadInternalTestData() removed
 
 void QucsTouchstoneViewer::onSynthesizeClicked()
 {
@@ -614,11 +603,11 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
 {
     dataTable->clearContents();
     dataTable->setRowCount(0);
-    logOutputArea->clear();
+    if (logOutputArea) logOutputArea->clear();
 
     QString targetFreqStr = targetFrequencyInput->text();
     QString targetUnitStr = targetFrequencyUnitComboBox->currentText();
-    logOutputArea->append(QString("Analyze Frequency input: Target: %1 %2").arg(targetFreqStr).arg(targetUnitStr));
+    if (logOutputArea) logOutputArea->append(QString("Analyze Frequency input: Target: %1 %2").arg(targetFreqStr).arg(targetUnitStr));
     qDebug() << "Analyze Frequency button clicked. Target Freq:" << targetFreqStr << targetUnitStr;
 
     bool conversionOk;
@@ -630,13 +619,13 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
     if (!conversionOk) {
         qWarning() << "Invalid target frequency input:" << targetFreqStr;
         QMessageBox::warning(this, tr("Invalid Input"), tr("Target frequency is not a valid number."));
-        logOutputArea->append("Error: Invalid target frequency input.");
+        if (logOutputArea) logOutputArea->append("Error: Invalid target frequency input.");
         return;
     }
     if (m_fullTouchstoneData.isEmpty() || !m_fullTouchstoneData.contains("frequency") || m_fullTouchstoneData["frequency"].isEmpty()) {
         qWarning() << "No data loaded to analyze.";
         QMessageBox::information(this, tr("No Data"), tr("Please load a Touchstone file first."));
-        logOutputArea->append("Info: No data loaded to analyze.");
+        if (logOutputArea) logOutputArea->append("Info: No data loaded to analyze.");
         return;
     }
 
@@ -644,15 +633,15 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
     if (targetUnitStr == "MHz") f_target1_GHz *= 1e-3;
     else if (targetUnitStr == "kHz") f_target1_GHz *= 1e-6;
     else if (targetUnitStr == "Hz") f_target1_GHz *= 1e-9;
-    logOutputArea->append(QString("Scaled Primary Target Frequency (f_target1): %1 GHz").arg(QString::number(f_target1_GHz, 'g', 10)));
+    if (logOutputArea) logOutputArea->append(QString("Scaled Primary Target Frequency (f_target1): %1 GHz").arg(QString::number(f_target1_GHz, 'g', 10)));
 
     double f_target2_GHz = 0.05 * f_target1_GHz;
-    logOutputArea->append(QString("Scaled Secondary Target Frequency (f_target2 = 0.05 * f_target1): %1 GHz").arg(QString::number(f_target2_GHz, 'g', 10)));
+    if (logOutputArea) logOutputArea->append(QString("Scaled Secondary Target Frequency (f_target2 = 0.05 * f_target1): %1 GHz").arg(QString::number(f_target2_GHz, 'g', 10)));
 
     const QList<double>& frequencies = m_fullTouchstoneData["frequency"];
     if (frequencies.isEmpty()) {
         qWarning() << "Frequency data list is present but empty.";
-        logOutputArea->append("Error: Frequency data list is empty in loaded file.");
+        if (logOutputArea) logOutputArea->append("Error: Frequency data list is empty in loaded file.");
         return;
     }
 
@@ -678,11 +667,11 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
     }
     m_analyzedNumPorts = numPortsInFile;
 
-    logOutputArea->append(QString("--- Analysis Results (File has %1 port(s)) ---").arg(numPortsInFile));
+    if (logOutputArea) logOutputArea->append(QString("--- Analysis Results (File has %1 port(s)) ---").arg(numPortsInFile));
 
     if (closestIndex1 != -1) {
         double actualFreq1_GHz = frequencies.at(closestIndex1);
-        logOutputArea->append(QString("Data for Primary Target (Closest to %1 GHz is %2 GHz, Index: %3)")
+        if (logOutputArea) logOutputArea->append(QString("Data for Primary Target (Closest to %1 GHz is %2 GHz, Index: %3)")
             .arg(QString::number(f_target1_GHz, 'g', 10))
             .arg(QString::number(actualFreq1_GHz, 'g', 10))
             .arg(closestIndex1));
@@ -699,32 +688,32 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
             m_Z0_calc = z0_point1;
             m_actual_ftarget_hz_calc = actualFreq1_GHz * 1e9;
             m_analysisResultsAvailable = true;
-            logOutputArea->append("Stored Y-parameters, Z0, and frequency from PRIMARY target for potential synthesis.");
+            if (logOutputArea) logOutputArea->append("Stored Y-parameters, Z0, and frequency from PRIMARY target for potential synthesis.");
         } else if (numPorts_point1_check == 2 && (!y_calc_success1 || std::isnan(y11.real())) ) {
-             logOutputArea->append("Y-parameters for PRIMARY target are singular or could not be calculated. Cannot use for synthesis.");
+             if (logOutputArea) logOutputArea->append("Y-parameters for PRIMARY target are singular or could not be calculated. Cannot use for synthesis.");
         } else if (numPorts_point1_check != 2 && numPortsInFile == 2) {
-             logOutputArea->append("Y-Matrix calculation for PRIMARY target indicated not 2-port, though file is 2-port. Check data integrity.");
+             if (logOutputArea) logOutputArea->append("Y-Matrix calculation for PRIMARY target indicated not 2-port, though file is 2-port. Check data integrity.");
         }
 
         calculateAndLogZMatrixForFrequencyPoint(closestIndex1, actualFreq1_GHz);
         calculateAndLogYMatrixForFrequencyPoint(closestIndex1, actualFreq1_GHz);
 
     } else {
-        logOutputArea->append(QString("Could not find a closest frequency for the primary target %1 GHz.").arg(QString::number(f_target1_GHz, 'g', 10)));
+        if (logOutputArea) logOutputArea->append(QString("Could not find a closest frequency for the primary target %1 GHz.").arg(QString::number(f_target1_GHz, 'g', 10)));
     }
 
-    logOutputArea->append("");
+    if (logOutputArea) logOutputArea->append("");
 
     bool process_f2_logging = true;
     if (closestIndex2 == closestIndex1 && std::abs(f_target1_GHz - f_target2_GHz) < 1e-12) {
-        logOutputArea->append(QString("Secondary target frequency is effectively identical to primary; results already processed and shown."));
+        if (logOutputArea) logOutputArea->append(QString("Secondary target frequency is effectively identical to primary; results already processed and shown."));
         if (m_analysisResultsAvailable) {
              m_y11_calc_low = m_y11_calc; m_y12_calc_low = m_y12_calc;
              m_y21_calc_low = m_y21_calc; m_y22_calc_low = m_y22_calc;
              m_Z0_calc_low = m_Z0_calc;
              m_actual_flow_hz_calc = m_actual_ftarget_hz_calc;
              m_lowFreqAnalysisResultsAvailable = true;
-             logOutputArea->append("Copied primary target results to secondary low-frequency results as targets were identical.");
+             if (logOutputArea) logOutputArea->append("Copied primary target results to secondary low-frequency results as targets were identical.");
         } else {
             m_lowFreqAnalysisResultsAvailable = false;
         }
@@ -733,7 +722,7 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
 
     if (closestIndex2 != -1 && process_f2_logging) {
         double actualFreq2_GHz = frequencies.at(closestIndex2);
-        logOutputArea->append(QString("Data for Secondary Target (Closest to %1 GHz is %2 GHz, Index: %3)")
+        if (logOutputArea) logOutputArea->append(QString("Data for Secondary Target (Closest to %1 GHz is %2 GHz, Index: %3)")
             .arg(QString::number(f_target2_GHz, 'g', 10))
             .arg(QString::number(actualFreq2_GHz, 'g', 10))
             .arg(closestIndex2));
@@ -751,12 +740,12 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
             m_Z0_calc_low = z0_point2;
             m_actual_flow_hz_calc = actualFreq2_GHz * 1e9;
             m_lowFreqAnalysisResultsAvailable = true;
-            logOutputArea->append("Stored Y-parameters, Z0, and frequency from SECONDARY (low-freq) target for potential synthesis.");
+            if (logOutputArea) logOutputArea->append("Stored Y-parameters, Z0, and frequency from SECONDARY (low-freq) target for potential synthesis.");
         } else if (numPorts_point2_check == 2 && (!y_calc_success2 || std::isnan(y11_low.real())) ) {
-             logOutputArea->append("Y-parameters for SECONDARY (low-freq) target are singular or could not be calculated.");
+             if (logOutputArea) logOutputArea->append("Y-parameters for SECONDARY (low-freq) target are singular or could not be calculated.");
              m_lowFreqAnalysisResultsAvailable = false;
         } else if (numPorts_point2_check != 2 && numPortsInFile == 2) {
-             logOutputArea->append("Y-Matrix calculation for SECONDARY (low-freq) target indicated not 2-port, though file is 2-port. Check data integrity.");
+             if (logOutputArea) logOutputArea->append("Y-Matrix calculation for SECONDARY (low-freq) target indicated not 2-port, though file is 2-port. Check data integrity.");
              m_lowFreqAnalysisResultsAvailable = false;
         } else {
             m_lowFreqAnalysisResultsAvailable = false;
@@ -766,7 +755,7 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
         calculateAndLogYMatrixForFrequencyPoint(closestIndex2, actualFreq2_GHz);
 
     } else if (process_f2_logging) {
-        logOutputArea->append(QString("Could not find a closest frequency for the secondary target %1 GHz.").arg(QString::number(f_target2_GHz, 'g', 10)));
+        if (logOutputArea) logOutputArea->append(QString("Could not find a closest frequency for the secondary target %1 GHz.").arg(QString::number(f_target2_GHz, 'g', 10)));
         m_lowFreqAnalysisResultsAvailable = false;
     }
 }
@@ -790,11 +779,11 @@ QString QucsTouchstoneViewer::formatComplex(const std::complex<double>& num) {
 
 void QucsTouchstoneViewer::logSParametersForFrequencyPoint(int pointIndex, double actualFreq) {
     if (pointIndex < 0 || !m_fullTouchstoneData.contains("frequency") || pointIndex >= m_fullTouchstoneData["frequency"].size()) {
-        logOutputArea->append(QString("Error: Invalid index %1 for S-parameter logging.").arg(pointIndex));
+        if (logOutputArea) logOutputArea->append(QString("Error: Invalid index %1 for S-parameter logging.").arg(pointIndex));
         return;
     }
 
-    logOutputArea->append(QString("\n--- S-Parameters at %1 GHz ---").arg(QString::number(actualFreq, 'g', 10)));
+    if (logOutputArea) logOutputArea->append(QString("\n--- S-Parameters at %1 GHz ---").arg(QString::number(actualFreq, 'g', 10)));
 
     int numPorts = 0;
     if (m_fullTouchstoneData.contains("n_ports") && !m_fullTouchstoneData["n_ports"].isEmpty()) {
@@ -802,7 +791,7 @@ void QucsTouchstoneViewer::logSParametersForFrequencyPoint(int pointIndex, doubl
     }
 
     if (numPorts == 0) {
-        logOutputArea->append("Number of ports unknown, cannot log S-parameters reliably.");
+        if (logOutputArea) logOutputArea->append("Number of ports unknown, cannot log S-parameters reliably.");
         return;
     }
 
@@ -818,13 +807,13 @@ void QucsTouchstoneViewer::logSParametersForFrequencyPoint(int pointIndex, doubl
                 double s_im = m_fullTouchstoneData[s_im_key].at(pointIndex);
 
                 if (std::isnan(s_re) || std::isnan(s_im)) {
-                    logOutputArea->append(QString("S%1%2 = NaN").arg(i).arg(j));
+                    if (logOutputArea) logOutputArea->append(QString("S%1%2 = NaN").arg(i).arg(j));
                 } else {
                     QString s_param_name = QString("S%1%2").arg(i).arg(j);
-                    logOutputArea->append(s_param_name + " = " + formatComplex({s_re, s_im}));
+                    if (logOutputArea) logOutputArea->append(s_param_name + " = " + formatComplex({s_re, s_im}));
                 }
             } else {
-                logOutputArea->append(QString("S%1%2 = Data N/A").arg(i).arg(j));
+                if (logOutputArea) logOutputArea->append(QString("S%1%2 = Data N/A").arg(i).arg(j));
             }
         }
     }
@@ -893,12 +882,12 @@ void QucsTouchstoneViewer::calculateAndLogZMatrixForFrequencyPoint(int pointInde
     }
 
     if (numPorts != 2) {
-        logOutputArea->append(QString("Z-Matrix calculation skipped: Only supported for 2-port data (found %1 ports).").arg(numPorts));
+        if (logOutputArea) logOutputArea->append(QString("Z-Matrix calculation skipped: Only supported for 2-port data (found %1 ports).").arg(numPorts));
         return;
     }
 
     if (pointIndex < 0 || !m_fullTouchstoneData.contains("Z0") || pointIndex >= m_fullTouchstoneData["Z0"].size()) {
-        logOutputArea->append(QString("Error: Invalid index %1 or missing Z0 for Z-matrix calculation.").arg(pointIndex));
+        if (logOutputArea) logOutputArea->append(QString("Error: Invalid index %1 or missing Z0 for Z-matrix calculation.").arg(pointIndex));
         return;
     }
     double Z0_val = m_fullTouchstoneData["Z0"].at(pointIndex);
@@ -914,26 +903,28 @@ void QucsTouchstoneViewer::calculateAndLogZMatrixForFrequencyPoint(int pointInde
             pointIndex < m_fullTouchstoneData[re_key].size() && pointIndex < m_fullTouchstoneData[im_key].size()) {
             *(s_params_ptrs[k]) = {m_fullTouchstoneData[re_key].at(pointIndex), m_fullTouchstoneData[im_key].at(pointIndex)};
              if (std::isnan(s_params_ptrs[k]->real()) || std::isnan(s_params_ptrs[k]->imag())) {
-                logOutputArea->append(QString("Error: S%1 contains NaN, cannot calculate Z-Matrix.").arg(s_indices.at(k)));
+                if (logOutputArea) logOutputArea->append(QString("Error: S%1 contains NaN, cannot calculate Z-Matrix.").arg(s_indices.at(k)));
                 return;
             }
         } else {
-            logOutputArea->append(QString("Error: Missing S%1 data for Z-Matrix calculation.").arg(s_indices.at(k)));
+            if (logOutputArea) logOutputArea->append(QString("Error: Missing S%1 data for Z-Matrix calculation.").arg(s_indices.at(k)));
             return;
         }
     }
 
-    logOutputArea->append(QString("\n--- Z-Matrix at %1 GHz (Z0 = %2 Ohms) ---")
+    if (logOutputArea) logOutputArea->append(QString("\n--- Z-Matrix at %1 GHz (Z0 = %2 Ohms) ---")
         .arg(QString::number(actualFreq, 'g', 10)).arg(Z0_val));
 
     std::complex<double> den_z = (1.0 - s11) * (1.0 - s22) - s12 * s21;
 
     if (std::abs(den_z) < 1e-12) {
-        logOutputArea->append("Z-Matrix: Denominator is near zero, parameters are singular/infinite.");
-        logOutputArea->append("Z11 = Singular");
-        logOutputArea->append("Z12 = Singular");
-        logOutputArea->append("Z21 = Singular");
-        logOutputArea->append("Z22 = Singular");
+        if (logOutputArea) {
+            logOutputArea->append("Z-Matrix: Denominator is near zero, parameters are singular/infinite.");
+            logOutputArea->append("Z11 = Singular");
+            logOutputArea->append("Z12 = Singular");
+            logOutputArea->append("Z21 = Singular");
+            logOutputArea->append("Z22 = Singular");
+        }
         return;
     }
 
@@ -942,14 +933,16 @@ void QucsTouchstoneViewer::calculateAndLogZMatrixForFrequencyPoint(int pointInde
     std::complex<double> Z21 = Z0_val * (2.0 * s21) / den_z;
     std::complex<double> Z22 = Z0_val * ((1.0 - s11) * (1.0 + s22) + s12 * s21) / den_z;
 
-    logOutputArea->append(QString("Z11 = %1").arg(formatComplex(Z11)));
-    logOutputArea->append(QString("Z12 = %1").arg(formatComplex(Z12)));
-    logOutputArea->append(QString("Z21 = %1").arg(formatComplex(Z21)));
-    logOutputArea->append(QString("Z22 = %1").arg(formatComplex(Z22)));
+    if (logOutputArea) {
+        logOutputArea->append(QString("Z11 = %1").arg(formatComplex(Z11)));
+        logOutputArea->append(QString("Z12 = %1").arg(formatComplex(Z12)));
+        logOutputArea->append(QString("Z21 = %1").arg(formatComplex(Z21)));
+        logOutputArea->append(QString("Z22 = %1").arg(formatComplex(Z22)));
+    }
 }
 
 void QucsTouchstoneViewer::calculateAndLogYMatrixForFrequencyPoint(int pointIndex, double actualFreq) {
-    logOutputArea->append(QString("\n--- Y-Matrix at %1 GHz ---").arg(QString::number(actualFreq, 'g', 10)));
+    if (logOutputArea) logOutputArea->append(QString("\n--- Y-Matrix at %1 GHz ---").arg(QString::number(actualFreq, 'g', 10)));
 
     std::complex<double> y11, y12, y21, y22;
     double Z0_at_point;
@@ -958,27 +951,31 @@ void QucsTouchstoneViewer::calculateAndLogYMatrixForFrequencyPoint(int pointInde
     bool success = calculateYMatrix(pointIndex, y11, y12, y21, y22, Z0_at_point, numPorts_at_point);
 
     if (numPorts_at_point != 2) {
-        logOutputArea->append(QString("Y-Matrix calculation skipped: Only supported for 2-port data (found %1 ports).").arg(numPorts_at_point));
+        if (logOutputArea) logOutputArea->append(QString("Y-Matrix calculation skipped: Only supported for 2-port data (found %1 ports).").arg(numPorts_at_point));
         return;
     }
     if (!success) {
-        logOutputArea->append("Error: Could not calculate Y-Matrix due to missing data, NaN S-parameters, or Z0=0.");
+        if (logOutputArea) logOutputArea->append("Error: Could not calculate Y-Matrix due to missing data, NaN S-parameters, or Z0=0.");
         return;
     }
     if (std::isnan(y11.real())) {
-         logOutputArea->append("Y-Matrix: Parameters are singular/infinite (denominator was near zero).");
-         logOutputArea->append("Y11 = Singular");
-         logOutputArea->append("Y12 = Singular");
-         logOutputArea->append("Y21 = Singular");
-         logOutputArea->append("Y22 = Singular");
+         if (logOutputArea) {
+            logOutputArea->append("Y-Matrix: Parameters are singular/infinite (denominator was near zero).");
+            logOutputArea->append("Y11 = Singular");
+            logOutputArea->append("Y12 = Singular");
+            logOutputArea->append("Y21 = Singular");
+            logOutputArea->append("Y22 = Singular");
+         }
          return;
     }
 
-    logOutputArea->append(QString("(Using Z0 = %1 Ohms, Y0 = 1/Z0 Siemens)").arg(Z0_at_point));
-    logOutputArea->append(QString("Y11 = %1").arg(formatComplex(y11)));
-    logOutputArea->append(QString("Y12 = %1").arg(formatComplex(y12)));
-    logOutputArea->append(QString("Y21 = %1").arg(formatComplex(y21)));
-    logOutputArea->append(QString("Y22 = %1").arg(formatComplex(y22)));
+    if (logOutputArea) {
+        logOutputArea->append(QString("(Using Z0 = %1 Ohms, Y0 = 1/Z0 Siemens)").arg(Z0_at_point));
+        logOutputArea->append(QString("Y11 = %1").arg(formatComplex(y11)));
+        logOutputArea->append(QString("Y12 = %1").arg(formatComplex(y12)));
+        logOutputArea->append(QString("Y21 = %1").arg(formatComplex(y21)));
+        logOutputArea->append(QString("Y22 = %1").arg(formatComplex(y22)));
+    }
 }
 
 double QucsTouchstoneViewer::roundToNDecimals(double value, int n) {
@@ -1356,88 +1353,14 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
 
 void QucsTouchstoneViewer::displayData(int specificRowIndex /* = -1 */)
 {
-    dataTable->clearContents();
-    logOutputArea->append(QString("Updating display. Specific row: %1").arg(specificRowIndex));
-
-    if (m_fullTouchstoneData.isEmpty() || !m_fullTouchstoneData.contains("frequency") || m_fullTouchstoneData["frequency"].isEmpty()) {
-        dataTable->setRowCount(0);
-        qWarning() << "displayData called with no valid m_fullTouchstoneData.";
-        return;
+    // This function is now effectively deprecated and will be removed.
+    // Its functionality is replaced by logging in onAnalyzeFrequencyClicked.
+    // For now, just log that it was called if it's still reachable.
+    qDebug() << "displayData(int) called with index" << specificRowIndex << "(Functionality moved to log area).";
+    if (logOutputArea) { // Check if logOutputArea is valid
+      logOutputArea->append(QString("Info: Table display is now handled by log area for analysis. Called displayData with row: %1").arg(specificRowIndex));
     }
-
-    const QList<double>& freq = m_fullTouchstoneData["frequency"];
-    int number_of_ports = 0;
-    if (m_fullTouchstoneData.contains("n_ports") && !m_fullTouchstoneData["n_ports"].isEmpty()) {
-        number_of_ports = static_cast<int>(m_fullTouchstoneData["n_ports"].first());
-    }
-
-    QStringList sParamTableColumns = {"11", "12", "21", "22"};
-
-    if (specificRowIndex != -1) {
-        if (specificRowIndex >= 0 && specificRowIndex < freq.size()) {
-            dataTable->setRowCount(1);
-            qDebug() << "Displaying single row index:" << specificRowIndex << "Freq:" << freq.at(specificRowIndex);
-
-            dataTable->setItem(0, 0, new QTableWidgetItem(QString::number(freq.at(specificRowIndex), 'g', 10)));
-
-            for (int j = 0; j < sParamTableColumns.size(); ++j) {
-                QString current_s_param_index = sParamTableColumns.at(j);
-                QString s_param_key_db = QString("S%1_dB").arg(current_s_param_index);
-                bool should_display_sparam = false;
-
-                if (number_of_ports == 1 && current_s_param_index == "11") should_display_sparam = true;
-                else if (number_of_ports >= 2) should_display_sparam = true;
-
-                if (should_display_sparam && m_fullTouchstoneData.contains(s_param_key_db) && specificRowIndex < m_fullTouchstoneData[s_param_key_db].size()) {
-                    double val = m_fullTouchstoneData[s_param_key_db].at(specificRowIndex);
-                    dataTable->setItem(0, j + 1, new QTableWidgetItem(std::isnan(val) ? "NaN" : QString::number(val, 'f', 4)));
-                } else {
-                    dataTable->setItem(0, j + 1, new QTableWidgetItem("N/A"));
-                }
-            }
-
-            if (m_fullTouchstoneData.contains("Z0") && specificRowIndex < m_fullTouchstoneData["Z0"].size()) {
-                 dataTable->setItem(0, 5, new QTableWidgetItem(QString::number(m_fullTouchstoneData["Z0"].at(specificRowIndex), 'f', 2)));
-            } else if (m_fullTouchstoneData.contains("Z0") && !m_fullTouchstoneData["Z0"].isEmpty()){
-                dataTable->setItem(0, 5, new QTableWidgetItem(QString::number(m_fullTouchstoneData["Z0"].first(), 'f', 2)));
-            } else {
-                dataTable->setItem(0, 5, new QTableWidgetItem("50.00 (default)"));
-            }
-        } else {
-            dataTable->setRowCount(0);
-            qWarning() << "displayData called with invalid specificRowIndex:" << specificRowIndex << "Max index:" << freq.size() -1;
-        }
-    } else {
-        int numRowsToShow = qMin(10, freq.size());
-        dataTable->setRowCount(numRowsToShow);
-        qDebug() << "Displaying default view, rows:" << numRowsToShow;
-
-        for (int i = 0; i < numRowsToShow; ++i) {
-            dataTable->setItem(i, 0, new QTableWidgetItem(QString::number(freq.at(i), 'g', 10)));
-
-            for (int j = 0; j < sParamTableColumns.size(); ++j) {
-                QString current_s_param_index = sParamTableColumns.at(j);
-                QString s_param_key_db = QString("S%1_dB").arg(current_s_param_index);
-                bool should_display_sparam = false;
-
-                if (number_of_ports == 1 && current_s_param_index == "11") should_display_sparam = true;
-                else if (number_of_ports >= 2) should_display_sparam = true;
-
-                if (should_display_sparam && m_fullTouchstoneData.contains(s_param_key_db) && i < m_fullTouchstoneData[s_param_key_db].size()) {
-                    double val = m_fullTouchstoneData[s_param_key_db].at(i);
-                    dataTable->setItem(i, j + 1, new QTableWidgetItem(std::isnan(val) ? "NaN" : QString::number(val, 'f', 4)));
-                } else {
-                    dataTable->setItem(i, j + 1, new QTableWidgetItem("N/A"));
-                }
-            }
-
-            if (m_fullTouchstoneData.contains("Z0") && i < m_fullTouchstoneData["Z0"].size()) {
-                 dataTable->setItem(i, 5, new QTableWidgetItem(QString::number(m_fullTouchstoneData["Z0"].at(i), 'f', 2)));
-            } else if (m_fullTouchstoneData.contains("Z0") && !m_fullTouchstoneData["Z0"].isEmpty()){
-                dataTable->setItem(i, 5, new QTableWidgetItem(QString::number(m_fullTouchstoneData["Z0"].first(), 'f', 2)));
-            } else {
-                dataTable->setItem(i, 5, new QTableWidgetItem("50.00 (default)"));
-            }
-        }
-    }
+    // Ensure table is cleared if it was previously used.
+    // dataTable->clearContents(); // dataTable is removed from class
+    // dataTable->setRowCount(0);
 }

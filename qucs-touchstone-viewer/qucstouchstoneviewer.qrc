@@ -1,5 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>bitmaps/big.qucs.xpm</file>
+        <file>bitmaps/L-pi.svg</file>
+        <file>bitmaps/C-pi.svg</file>
     </qresource>
 </RCC>
