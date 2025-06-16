@@ -16,7 +16,7 @@ find_package(Qt5Core)
 find_package(Qt5Gui)
 find_package(Qt5Widgets)
 find_package(Qt5PrintSupport) # Add PrintSupport for QPrinter
-find_package(Qt5Svg)
+find_package(Qt5Svg REQUIRED)
 
 set(APPLICATION_SRCS
     main.cpp

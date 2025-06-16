@@ -25,7 +25,7 @@
 #include <QLineEdit>
 #include <QDoubleValidator>
 #include <complex>
-#include <QtSvgWidgets/QSvgWidget> // Correct include path for QSvgWidget
+#include <QSvgWidget> // Standard Qt5 include when Qt5::Svg is linked
 
 
 // Assuming tQucsSettings is defined elsewhere and accessible
