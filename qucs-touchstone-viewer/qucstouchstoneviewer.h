@@ -68,6 +68,7 @@ private:
                           std::complex<double>& y11_out, std::complex<double>& y12_out,
                           std::complex<double>& y21_out, std::complex<double>& y22_out,
                           double& Z0_at_point_out, int& numPorts_at_point_out);
+    QString formatComplex(const std::complex<double>& num);
 
     // UI Elements
     QPushButton *openButton;
