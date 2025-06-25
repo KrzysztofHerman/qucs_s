@@ -8,7 +8,7 @@
 #include <QMessageBox>
 #include <QLineEdit>
 #include <QDoubleValidator>
-#include <QtSvgWidgets/QSvgWidget>
+#include <QSvgWidget> // For Qt6
 #include <QSvgRenderer> // Added for QSvgWidget::renderer()
 
 #include <random>
@@ -601,8 +601,7 @@ void QucsTouchstoneViewer::onSynthesizeClicked()
 
 void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
 {
-    dataTable->clearContents();
-    dataTable->setRowCount(0);
+    // dataTable was removed, clear/reset is not needed.
     if (logOutputArea) logOutputArea->clear();
 
     QString targetFreqStr = targetFrequencyInput->text();
@@ -757,13 +756,6 @@ void QucsTouchstoneViewer::onAnalyzeFrequencyClicked()
     } else if (process_f2_logging) {
         if (logOutputArea) logOutputArea->append(QString("Could not find a closest frequency for the secondary target %1 GHz.").arg(QString::number(f_target2_GHz, 'g', 10)));
         m_lowFreqAnalysisResultsAvailable = false;
-    }
-}
-
-
-void QucsTouchstoneViewer::handleLogMessage(const QString& message) {
-    if (logOutputArea) {
-        logOutputArea->append(message);
     }
 }
 
@@ -1349,18 +1341,4 @@ QMap<QString, QList<double>> QucsTouchstoneViewer::readTouchstoneFile(const QStr
              << ". Confirmed ports:" << number_of_ports;
     file.close();
     return file_data;
-}
-
-void QucsTouchstoneViewer::displayData(int specificRowIndex /* = -1 */)
-{
-    // This function is now effectively deprecated and will be removed.
-    // Its functionality is replaced by logging in onAnalyzeFrequencyClicked.
-    // For now, just log that it was called if it's still reachable.
-    qDebug() << "displayData(int) called with index" << specificRowIndex << "(Functionality moved to log area).";
-    if (logOutputArea) { // Check if logOutputArea is valid
-      logOutputArea->append(QString("Info: Table display is now handled by log area for analysis. Called displayData with row: %1").arg(specificRowIndex));
-    }
-    // Ensure table is cleared if it was previously used.
-    // dataTable->clearContents(); // dataTable is removed from class
-    // dataTable->setRowCount(0);
 }

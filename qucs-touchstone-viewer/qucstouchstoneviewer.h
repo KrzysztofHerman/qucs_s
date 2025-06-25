@@ -84,7 +84,7 @@ private:
 
     // Member variables for storing data and state
     QMap<QString, QList<double>> m_fullTouchstoneData;
-    // bool m_isTargetFrequencyApplied; // This might be removed if displayData is removed (Kept for now)
+    bool m_isTargetFrequencyApplied; // Uncommented as it's used
 
     bool m_analysisResultsAvailable;
     int  m_analyzedNumPorts;

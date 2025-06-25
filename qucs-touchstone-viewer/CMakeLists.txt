@@ -12,11 +12,12 @@ set(CMAKE_AUTOUIC ON)
 
 project(qucs-touchstone-viewer)
 
-find_package(Qt5Core)
-find_package(Qt5Gui)
-find_package(Qt5Widgets)
-find_package(Qt5PrintSupport) # Add PrintSupport for QPrinter
-find_package(Qt5Svg REQUIRED)
+find_package(Qt6Core REQUIRED)
+find_package(Qt6Gui REQUIRED)
+find_package(Qt6Widgets REQUIRED)
+find_package(Qt6PrintSupport REQUIRED) # Add PrintSupport for QPrinter
+find_package(Qt6Svg REQUIRED)
+find_package(Qt6SvgWidgets REQUIRED)
 
 set(APPLICATION_SRCS
     main.cpp
@@ -51,7 +52,7 @@ if(APPLE)
     set(APPLICATION_ICON_RESOURCE_MACOS ${CMAKE_SOURCE_DIR}/qucs/bitmaps/qucs.icns)
 endif()
 
-qt5_add_resources(qucs_RESOURCES ${APPLICATION_RESOURCES})
+qt_add_resources(qucs_RESOURCES ${APPLICATION_RESOURCES})
 
 add_executable(qucs-touchstone-viewer MACOSX_BUNDLE
     ${APPLICATION_SRCS}
@@ -61,7 +62,7 @@ add_executable(qucs-touchstone-viewer MACOSX_BUNDLE
     ${APPLICATION_ICON_RESOURCE_MACOS}
 )
 
-target_link_libraries(qucs-touchstone-viewer Qt5::Core Qt5::Gui Qt5::Widgets Qt5::PrintSupport Qt5::Svg)
+target_link_libraries(qucs-touchstone-viewer Qt6::Core Qt6::Gui Qt6::Widgets Qt6::PrintSupport Qt6::Svg Qt6::SvgWidgets)
 
 # Include directory for s-spar-viewer components
 # include_directories(../qucs-s-spar-viewer)
