@@ -137,27 +137,26 @@ void QucsTouchstoneViewer::onNetworkTypeChanged(const QString& newType)
 
     if (networkDisplayWidget) {
         if (!imagePath.isEmpty()) {
-            if (networkDisplayWidget->load(imagePath)) {
+            networkDisplayWidget->load(imagePath); // Returns void in Qt5, bool in Qt6
+            QSvgRenderer *renderer = networkDisplayWidget->renderer();
+            if (renderer && renderer->isValid()) {
                 if (logOutputArea) logOutputArea->append(QString("Displayed image: %1").arg(imagePath));
                 qDebug() << "Successfully loaded SVG:" << imagePath;
             } else {
-                QSvgRenderer *renderer = networkDisplayWidget->renderer();
-                QString rendererError = "Unknown";
+                QString rendererError = "Unknown error after load.";
                 if (renderer && !renderer->isValid()){
-                    rendererError = "Renderer reports invalid SVG content or load error.";
+                    rendererError = "Renderer reports invalid SVG content or load error after attempting to load.";
                 } else if (!renderer) {
-                    rendererError = "No SVG renderer available/loaded for QSvgWidget.";
-                } else {
-                    rendererError = "Load failed for unknown reasons (renderer seems valid). Check resource path and SVG file integrity.";
+                    rendererError = "No SVG renderer available/loaded for QSvgWidget after attempting to load.";
                 }
                 if (logOutputArea) logOutputArea->append(QString("Error: Could not load SVG image: %1. Details: %2").arg(imagePath).arg(rendererError));
                 qDebug() << "Failed to load SVG:" << imagePath << "Details:" << rendererError;
-                networkDisplayWidget->load(QString());
+                // networkDisplayWidget->load(QString()); // Optionally clear, but it might show nothing anyway if load failed
             }
         } else {
             if (logOutputArea) logOutputArea->append(QString("No image defined for network type: '%1'. Clearing display.").arg(newType));
             qDebug() << "No SVG defined for type:" << newType << ". Clearing widget.";
-            networkDisplayWidget->load(QString());
+            networkDisplayWidget->load(QString()); // Clear widget if no image path
         }
     } else {
         qWarning() << "networkDisplayWidget is null in onNetworkTypeChanged.";
