@@ -933,7 +933,7 @@ void QucsApp::slotSetCompView (int index)
         QMessageBox::information(this, tr("Info"),
                      tr("Default icon not found:\n %1.png").arg(vaBitmap));
         // default icon
-        vaIcon = QPixmap(":/bitmaps/editdelete.png");
+        vaIcon = QPixmap(":/bitmaps/svg/editdelete.svg");
       }
       QListWidgetItem *icon = new QListWidgetItem(vaIcon, Name);
       icon->setToolTip(Name);
@@ -1058,7 +1058,7 @@ void QucsApp::slotSearchComponent(const QString &searchText)
         else
         {
           // default icon
-          vaIcon = QPixmap(":/bitmaps/editdelete.png");
+          vaIcon = QPixmap(":/bitmaps/svg/editdelete.svg");
         }
 
         // Add icon an name tag to dock
@@ -3959,8 +3959,8 @@ QVariant QucsFileSystemModel::data( const QModelIndex& index, int role ) const
     if (role == Qt::DecorationRole) { // it's an icon
         QString dName = fileName(index);
         if (dName.endsWith("_prj")) { // it's a Qucs project
-            // for some reason SVG does not always work on Windows, so use PNG
-            return QIcon(":bitmaps/hicolor/128x128/apps/qucs.png");
+            // Use SVG for project icon, as it's in the QRC
+            return QIcon(":/bitmaps/hicolor/scalable/apps/qucs.svg");
         }
     }
     // return default system icon
