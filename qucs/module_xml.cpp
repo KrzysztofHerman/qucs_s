@@ -285,6 +285,50 @@ void Module::registerXmlComponents(const QString& componentPath)
                 arcs << arc;
             }
 
+            QList<XmlComponent::Rectangle> rectangles;
+
+            auto compRectangles(component->Symbols().Symbol().Rectangle());
+            for (auto it(compRectangles.begin()); it != compRectangles.end(); ++it)
+            {
+                XmlComponent::Rectangle rectangle(
+                        it->x().get(),
+                        it->y().get(),
+                        it->width().get(),
+                        it->height().get(),
+                        QString::fromUtf8(it->color()),
+                        static_cast<uint32_t>(it->lineWidth()),
+                        it->style(),
+                        QString::fromUtf8(it->fillColor()),
+                        it->fillStyle(),
+                        static_cast<bool>(it->filled()),
+                        QString::fromUtf8(it->condition())
+                );
+
+                rectangles << rectangle;
+            }
+
+            QList<XmlComponent::Arrow> arrows;
+
+            auto compArrows(component->Symbols().Symbol().Arrow());
+            for (auto it(compArrows.begin()); it != compArrows.end(); ++it)
+            {
+                XmlComponent::Arrow arrow(
+                        it->x1().get(),
+                        it->y1().get(),
+                        it->x2().get(),
+                        it->y2().get(),
+                        QString::fromUtf8(it->color()),
+                        static_cast<uint32_t>(it->width()),
+                        it->style(),
+                        it->headHeight(),
+                        it->headWidth(),
+                        it->headStyle(),
+                        QString::fromUtf8(it->condition())
+                );
+
+                arrows << arrow;
+            }
+
             QList<XmlComponent::Text> texts;
 
             auto compTexts(component->Symbols().Symbol().Text());
@@ -382,6 +426,8 @@ void Module::registerXmlComponents(const QString& componentPath)
                         portSyms,
                         lines,
                         arcs,
+                        rectangles,
+                        arrows,
                         texts
                 ));
 
