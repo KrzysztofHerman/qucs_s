@@ -184,6 +184,86 @@ public:
         int a_style;
     };
 
+    struct Rectangle
+    {
+        Rectangle(
+                int x,
+                int y,
+                int width,
+                int height,
+                const QString& color,
+                uint32_t lineWidth,
+                int style,
+                const QString& fillColor,
+                int fillStyle,
+                bool filled,
+                const QString& condition) :
+            a_x(x),
+            a_y(y),
+            a_width(width),
+            a_height(height),
+            a_color(color),
+            a_lineWidth(lineWidth),
+            a_style(style),
+            a_fillColor(fillColor),
+            a_fillStyle(fillStyle),
+            a_filled(filled),
+            a_condition(condition)
+        {}
+
+        int a_x;
+        int a_y;
+        int a_width;
+        int a_height;
+        QString a_color;
+        uint32_t a_lineWidth;
+        int a_style;
+        QString a_fillColor;
+        int a_fillStyle;
+        bool a_filled;
+        QString a_condition;
+    };
+
+    struct Arrow
+    {
+        Arrow(
+                int x1,
+                int y1,
+                int x2,
+                int y2,
+                const QString& color,
+                uint32_t width,
+                int style,
+                double headHeight,
+                double headWidth,
+                int headStyle,
+                const QString& condition) :
+            a_x1(x1),
+            a_y1(y1),
+            a_x2(x2),
+            a_y2(y2),
+            a_color(color),
+            a_width(width),
+            a_style(style),
+            a_headHeight(headHeight),
+            a_headWidth(headWidth),
+            a_headStyle(headStyle),
+            a_condition(condition)
+        {}
+
+        int a_x1;
+        int a_y1;
+        int a_x2;
+        int a_y2;
+        QString a_color;
+        uint32_t a_width;
+        int a_style;
+        double a_headHeight;
+        double a_headWidth;
+        int a_headStyle;
+        QString a_condition;
+    };
+
     struct Text
     {
         Text(
@@ -230,6 +310,8 @@ public:
             const QList<PortSym>& portSyms,
             const QList<Line>& lines,
             const QList<Arc>& arcs,
+            const QList<Rectangle>& rectangles,
+            const QList<Arrow>& arrows,
             const QList<Text>& texts);
     ~XmlComponent() {}
 
@@ -265,6 +347,8 @@ private:
     QList<PortSym> a_portSyms;
     QList<Line> a_lines;
     QList<Arc> a_arcs;
+    QList<Rectangle> a_rectangles;
+    QList<Arrow> a_arrows;
     QList<Text> a_texts;
 };
 
