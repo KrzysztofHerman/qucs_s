@@ -31,3 +31,40 @@ The VACASK simulator is SPICE-compatible with minor netlisting differences (e.g.
 - Build to ensure the new kernel is compiled and moc’d.
 - Run simulations for representative circuits: DC operating point, AC sweep, transient, and a subcircuit case to verify parenthesized ports are accepted.
 - Verify netlist saving, default simulator selection, and settings persistence across restarts.
+
+## 7. Mapping the diode example to Qucs-S
+The VACASK diode regression shown below exercises nested sweeps, OSDI model loading, and control/post-process sections:
+
+```
+ground 0
+
+load "diode.osdi"
+load "resistor.osdi"
+
+model vsource vsource
+model resistor resistor
+model d diode is=1e-12 n=2 rs=0.1 cjo=100p vj=1 m=0.5
+
+v1 (1 0) vsource dc=0
+r1 (1 2) resistor r=1
+d1 (2 0) d
+
+control
+  abort always
+  save default p(d1,gd) p(d1,cd)
+  sweep is model="d" parameter="is" values=[1e-12, 1e-10, 1e-8, 1e-6] continuation=1
+  sweep v1 instance="v1" parameter="dc" from=-50 to=10 mode="lin" points=200 continuation=1
+    analysis op1 op
+  postprocess(PYTHON, "runme.py")
+endc
+```
+
+To support this workflow inside Qucs-S:
+
+1. **OSDI model loading** – Allow `load "*.osdi"` lines to pass through the VACASK netlist unchanged. In the kernel’s `createNetlist`, treat these like Ngspice `.include` statements so files referenced from the schematic are emitted at the top of the deck.
+2. **Node parentheses** – Reuse existing node ordering but wrap every node name with parentheses when instantiating devices (`v1 (1 0) vsource`). Implement this in the VACASK kernel’s element writers so the rest of the SPICE syntax remains identical.
+3. **Model/sweep parameters** – Map Qucs device parameters to VACASK model cards (e.g., diode `is`, `n`, `rs`). When the schematic contains Parameter Sweep components, emit nested `sweep` blocks in the control section matching the example (outer `is` sweep, inner voltage sweep) and flag `continuation=1` to reuse operating points between sweeps.
+4. **Control block and analyses** – Emit a `control`/`endc` pair for VACASK rather than Ngspice’s `.control`. Insert `abort always` and `save` statements up front, then translate Qucs analyses into `analysis` commands (e.g., DC op as `analysis op1 op`). If multiple analyses are queued, follow the same ordering used for Ngspice in `ExternSimDialog::slotStart`.
+5. **Post-processing hooks** – Preserve `postprocess(PYTHON, "runme.py")` lines in the generated netlist and copy referenced scripts into the temporary simulation directory. After VACASK finishes, allow the kernel to leave the `.raw` output on disk so the Python helper can read it before Qucs cleans up.
+6. **CLI invocation** – Launch VACASK as `vacask <netlist>.sim` from `slotSimulate`, mirroring the existing process management (stdin closed, stdout/stderr captured). Keep the produced `.raw` file name predictable (`op1.raw` in the example) so `convertToQucsData` can import it into a dataset.
+7. **Dataset import** – If VACASK writes standard SPICE RAW, reuse the Ngspice parser path. Otherwise, add a small converter that reads the `.raw` file before the Python post-processor runs so both Qucs datasets and the regression script see the same file.
