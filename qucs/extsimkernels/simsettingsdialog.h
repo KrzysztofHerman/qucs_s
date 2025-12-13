@@ -30,10 +30,12 @@ private:
     QLabel *a_lblXyce;
     QLabel *a_lblNgspice;
     QLabel *a_lblSpiceOpus;
+    QLabel *a_lblVacask;
     QLabel *a_lblQucsator;
     QLabel *a_lblNgspiceSimParam;
     QLabel *a_lblXyceSimParam;
     QLabel *a_lblSpopusSimParam;
+    QLabel *a_lblVacaskSimParam;
     QLabel *a_lblCompatMode;
 
     QComboBox *a_cbxCompatMode;
@@ -41,10 +43,12 @@ private:
     QLineEdit *a_edtNgspice;
     QLineEdit *a_edtSpiceOpus;
     QLineEdit *a_edtXyce;
+    QLineEdit *a_edtVacask;
     QLineEdit *a_edtQucsator;
     QLineEdit *a_edtNgspiceSimParam;
     QLineEdit *a_edtXyceSimParam;
     QLineEdit *a_edtSpopusSimParam;
+    QLineEdit *a_edtVacaskSimParam;
 
     QPushButton *a_btnOK;
     QPushButton *a_btnCancel;
@@ -52,6 +56,7 @@ private:
     QPushButton *a_btnSetNgspice;
     QPushButton *a_btnSetSpOpus;
     QPushButton *a_btnSetXyce;
+    QPushButton *a_btnSetVacask;
     QPushButton *a_btnSetQucsator;
 
 public:
@@ -65,6 +70,7 @@ private slots:
     void slotSetXyce();
     void slotSetXycePar();
     void slotSetSpiceOpus();
+    void slotSetVacask();
     void slotSetQucsator();
 
 };

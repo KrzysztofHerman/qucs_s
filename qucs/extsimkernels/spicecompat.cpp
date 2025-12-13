@@ -399,6 +399,9 @@ QString spicecompat::getDefaultSimulatorName(int simulator)
         case spicecompat::simNgspice:
             result = QObject::tr("Ngspice");
             break;
+        case spicecompat::simVacask:
+            result = QObject::tr("VACASK");
+            break;
         case spicecompat::simSpiceOpus:
             result = QObject::tr("SpiceOpus");
             break;

@@ -33,6 +33,7 @@ ExternSimDialog::ExternSimDialog(Schematic* sch, bool netlist2Console, bool netl
     a_simStatusLog(new QListWidget),
     a_simProgress(new QProgressBar(this)),
     a_ngspice(new Ngspice(sch,this)),
+    a_vacask(new Vacask(sch,this)),
     a_xyce(new Xyce(sch,this)),
     a_wasSimulated(true),
     a_hasError(false),
@@ -53,6 +54,7 @@ ExternSimDialog::ExternSimDialog(Schematic* sch, bool netlist2Console, bool netl
     }
 
     connect(a_buttonStopSim,SIGNAL(clicked()),a_ngspice,SLOT(killThemAll()));
+    connect(a_buttonStopSim,SIGNAL(clicked()),a_vacask,SLOT(killThemAll()));
     connect(a_buttonStopSim,SIGNAL(clicked()),a_xyce,SLOT(killThemAll()));
     a_buttonStopSim->setEnabled(false);
 
@@ -60,6 +62,7 @@ ExternSimDialog::ExternSimDialog(Schematic* sch, bool netlist2Console, bool netl
 
     connect(a_buttonExit,SIGNAL(clicked()),this,SLOT(slotExit()));
     connect(a_buttonExit,SIGNAL(clicked()),a_ngspice,SLOT(killThemAll()));
+    connect(a_buttonExit,SIGNAL(clicked()),a_vacask,SLOT(killThemAll()));
     connect(a_buttonExit,SIGNAL(clicked()),a_xyce,SLOT(killThemAll()));
 
     QGroupBox *grp_1 = new QGroupBox(tr("Simulation console"),this);
@@ -73,9 +76,11 @@ ExternSimDialog::ExternSimDialog(Schematic* sch, bool netlist2Console, bool netl
     vbl1->addWidget(a_editSimConsole);
     grp_1->setLayout(vbl1);
     a_ngspice->setConsole(a_editSimConsole);
+    a_vacask->setConsole(a_editSimConsole);
     a_xyce->setConsole(a_editSimConsole);
 
     connect(a_ngspice,SIGNAL(progress(int)),a_simProgress,SLOT(setValue(int)));
+    connect(a_vacask,SIGNAL(progress(int)),a_simProgress,SLOT(setValue(int)));
     connect(a_xyce,SIGNAL(progress(int)),a_simProgress,SLOT(setValue(int)));
 
     QVBoxLayout *vl_top = new QVBoxLayout;
@@ -98,6 +103,7 @@ ExternSimDialog::ExternSimDialog(Schematic* sch, bool netlist2Console, bool netl
 ExternSimDialog::~ExternSimDialog()
 {
     a_ngspice->killThemAll();
+    a_vacask->killThemAll();
 }
 
 void ExternSimDialog::slotSetSimulator()
@@ -120,6 +126,25 @@ void ExternSimDialog::slotSetSimulator()
             a_ngspice->setSimulatorCmd(QucsSettings.NgspiceExecutable); //rely on $PATH
         }
         a_ngspice->setSimulatorParameters(_settings::Get().item<QString>("NgspiceParams"));
+    }
+        break;
+    case spicecompat::simVacask: {
+        a_xyce->setParallel(false);
+        connect(a_vacask,SIGNAL(started()),this,SLOT(slotNgspiceStarted()));
+        connect(a_vacask,SIGNAL(finished()),this,SLOT(slotProcessOutput()));
+        connect(a_vacask,SIGNAL(errors(QProcess::ProcessError)),this,SLOT(slotNgspiceStartError(QProcess::ProcessError)));
+        QString cmd;
+        if (QFileInfo(QucsSettings.VacaskExecutable).isRelative()) {
+            cmd = QFileInfo(QucsSettings.BinDir + QucsSettings.VacaskExecutable).absoluteFilePath();
+        } else {
+            cmd = QFileInfo(QucsSettings.VacaskExecutable).absoluteFilePath();
+        }
+        if (QFileInfo::exists(cmd)) {
+            a_vacask->setSimulatorCmd(cmd);
+        } else {
+            a_vacask->setSimulatorCmd(QucsSettings.VacaskExecutable);
+        }
+        a_vacask->setSimulatorParameters(_settings::Get().item<QString>("VacaskParams"));
     }
         break;
     case spicecompat::simXyce: {
@@ -170,6 +195,10 @@ void ExternSimDialog::slotProcessOutput()
     case spicecompat::simNgspice:
         ext = ".dat.ngspice";
         out = a_ngspice->getOutput();
+        break;
+    case spicecompat::simVacask:
+        ext = ".dat.vacask";
+        out = a_vacask->getOutput();
         break;
     case spicecompat::simXyce:
         ext = ".dat.xyce";
@@ -275,6 +304,9 @@ void ExternSimDialog::slotStart()
     case spicecompat::simNgspice:
         a_ngspice->slotSimulate();
         break;
+    case spicecompat::simVacask:
+        a_vacask->slotSimulate();
+        break;
     case spicecompat::simXyce:
         a_xyce->slotSimulate();
         break;
@@ -290,6 +322,7 @@ void ExternSimDialog::slotStop()
     a_buttonStopSim->setEnabled(false);
     a_buttonSaveNetlist->setEnabled(true);
     a_ngspice->killThemAll();
+    a_vacask->killThemAll();
 }
 
 void ExternSimDialog::slotSaveNetlist()
@@ -313,8 +346,13 @@ void ExternSimDialog::slotSaveNetlist()
     switch (QucsSettings.DefaultSimulator)
     {
         case spicecompat::simNgspice:
+        case spicecompat::simVacask:
         case spicecompat::simSpiceOpus:
-            a_ngspice->SaveNetlist(filename, a_netlist2Console);
+            if (QucsSettings.DefaultSimulator == spicecompat::simVacask) {
+                a_vacask->SaveNetlist(filename, a_netlist2Console);
+            } else {
+                a_ngspice->SaveNetlist(filename, a_netlist2Console);
+            }
             break;
         case spicecompat::simXyce:
             a_xyce->SaveNetlist(filename, a_netlist2Console);
@@ -367,6 +405,7 @@ bool ExternSimDialog::logContainsError(const QString &out)
     QStringList err_patterns;
     switch (QucsSettings.DefaultSimulator) {
     case spicecompat::simNgspice:
+    case spicecompat::simVacask:
         err_patterns<<"Error:"<<"ERROR"<<"Error "
                     <<"Syntax error:"<<"Expression err:"
                     <<"errors:"<<"simulation(s) aborted"
@@ -394,6 +433,7 @@ bool ExternSimDialog::logContainsWarning(const QString &out)
     QStringList warn_patterns;
     switch (QucsSettings.DefaultSimulator) {
     case spicecompat::simNgspice:
+    case spicecompat::simVacask:
         warn_patterns<<"Warning:"<<"WARNING"<<"Warning "
                     <<"warning:";
         break;
