@@ -39,7 +39,7 @@ namespace spicecompat {
 
      enum NgspiceCompatMode  { NgspDefault = 0, NgspLTspice = 1, NgspHSPICE = 2, NgspS3 = 3  };
 
-     enum SpiceDialect { SPICEDefault = 0, SPICEXyce = 1, CDL = 2 };
+     enum SpiceDialect { SPICEDefault = 0, SPICEXyce = 1, CDL = 2, SPICEVacask = 3 };
 
      int strToMSlineModel(const QString &model);
      int strToDispModel(const QString &model);

@@ -10,6 +10,7 @@ SET(EXTSIMKERNELS_HDRS
 externsimdialog.h
 abstractspicekernel.h
 ngspice.h
+vacask.h
 xyce.h
 qucs2spice.h
 spicecompat.h
@@ -27,6 +28,7 @@ SET(EXTSIMKERNELS_SRCS
 externsimdialog.cpp
 abstractspicekernel.cpp
 ngspice.cpp
+vacask.cpp
 xyce.cpp
 qucs2spice.cpp
 spicecompat.cpp
@@ -45,6 +47,7 @@ SET(EXTSIMKERNELS_MOC_HDRS
 externsimdialog.h
 abstractspicekernel.h
 ngspice.h
+vacask.h
 xyce.h
 customsimdialog.h
 simsettingsdialog.h

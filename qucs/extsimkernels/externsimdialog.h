@@ -21,6 +21,7 @@
 #include <QtGui>
 
 #include "ngspice.h"
+#include "vacask.h"
 #include "xyce.h"
 
 class Schematic;
@@ -42,6 +43,7 @@ private:
     QProgressBar *a_simProgress;
 
     Ngspice *a_ngspice;
+    Vacask *a_vacask;
     Xyce *a_xyce;
 
     bool a_wasSimulated;
