@@ -36,6 +36,8 @@
 #endif
 
 #include <QScopedPointer>
+#include <QDebug>
+#include <QFileInfo>
 
 #include <iostream>
 
@@ -483,7 +485,15 @@ void Ngspice::slotSimulate()
 
     QString netfile = "spice4qucs.cir";
     QString tmp_path = QDir::toNativeSeparators(a_workdir+QDir::separator()+netfile);
+    qInfo() << "[Ngspice] Generating netlist for" << spicecompat::getDefaultSimulatorName(QucsSettings.DefaultSimulator)
+            << "at" << tmp_path;
     SaveNetlist(tmp_path, false);
+    QFileInfo netInfo(tmp_path);
+    if (!netInfo.exists()) {
+        qWarning() << "[Ngspice] Netlist generation failed;" << tmp_path << "does not exist.";
+    } else {
+        qInfo() << "[Ngspice] Netlist generated (" << netInfo.size() << "bytes ).";
+    }
 
     removeAllSimulatorOutputs();
 
@@ -609,6 +619,8 @@ void Ngspice::SaveNetlist(QString filename, bool netlist2Console)
     a_sims.clear();
     a_vars.clear();
 
+    qInfo() << "[Ngspice] SaveNetlist invoked" << (netlist2Console ? "(console)" : filename);
+
     QScopedPointer<QString> netlistString;
     QScopedPointer<QTextStream> netlistStream;
     QScopedPointer<QFile> netlistFile;
@@ -624,17 +636,24 @@ void Ngspice::SaveNetlist(QString filename, bool netlist2Console)
         if (netlistFile->open(QFile::WriteOnly))
         {
             netlistStream.reset(new QTextStream(netlistFile.get()));
+            qInfo() << "[Ngspice] Writing netlist to" << QFileInfo(filename).absoluteFilePath();
         }
         else
         {
             QString msg = QStringLiteral("Tried to save netlist \nin %1\n(could not open for writing!)").arg(filename);
             QString final_msg = QStringLiteral("%1\n This could be an error in the QSettings settings file\n(usually in ~/.config/qucs/qucs_s.conf)\nThe value for S4Q_workdir (default:/spice4qucs) needs to be writeable!\nFor a Simulation Simulation will raise error! (most likely S4Q_workdir does not exists)").arg(msg);
             QMessageBox::critical(nullptr,tr("Problem with SaveNetlist"), final_msg, QMessageBox::Ok);
+            qWarning() << "[Ngspice] Failed to open netlist path for writing" << filename;
             return;
         }
     }
 
     createNetlist(*netlistStream, a_sims, a_vars, a_output_files);
+
+    if (netlist2Console)
+    {
+        qInfo() << "[Ngspice] Netlist generated in memory (" << netlistString->length() << " chars ).";
+    }
 
     if (netlist2Console)
     {
