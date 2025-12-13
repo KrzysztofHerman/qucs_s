@@ -32,6 +32,9 @@
 
 
 #include <QPlainTextEdit>
+#include <QDir>
+#include <QFileInfo>
+#include <QDebug>
 #include <algorithm>
 
 /*!
@@ -1139,6 +1142,64 @@ int AbstractSpiceKernel::checkRawOutupt(QString ngspice_file, QStringList &value
     return filetype;
 }
 
+bool AbstractSpiceKernel::convertRawOutputToDat(const QString &qucs_dataset)
+{
+    if (a_output_files.size() != 1) {
+        return false;
+    }
+
+    const QString rawOutput = a_output_files.constFirst();
+    if (!rawOutput.endsWith(QStringLiteral(".raw"), Qt::CaseInsensitive)) {
+        return false;
+    }
+
+    QDir workdir(a_workdir);
+    const QString rawPath = workdir.filePath(rawOutput);
+    if (!QFileInfo::exists(rawPath)) {
+        return false;
+    }
+
+    QDir prefix(QucsSettings.BinDir);
+    if (!prefix.cdUp()) {
+        return false;
+    }
+
+    const QString scriptPath = prefix.filePath(QStringLiteral("share/%1/python/raw2dat.py").arg(QUCS_NAME));
+    if (!QFileInfo::exists(scriptPath)) {
+        return false;
+    }
+
+    QProcess converter;
+    converter.setWorkingDirectory(workdir.absolutePath());
+    converter.start(QStringLiteral("python3"), {scriptPath, rawPath, qucs_dataset});
+
+    if (!converter.waitForStarted()) {
+        qWarning() << "Failed to start raw2dat converter" << converter.errorString();
+        return false;
+    }
+
+    if (!converter.waitForFinished()) {
+        qWarning() << "raw2dat conversion timed out";
+        return false;
+    }
+
+    if (converter.exitStatus() != QProcess::NormalExit || converter.exitCode() != 0) {
+        qWarning() << "raw2dat failed" << converter.readAllStandardError();
+        return false;
+    }
+
+    if (!QFileInfo::exists(qucs_dataset)) {
+        qWarning() << "raw2dat did not produce dataset" << qucs_dataset;
+        return false;
+    }
+
+    if (a_console) {
+        a_console->appendPlainText(tr("Converted %1 to %2").arg(rawPath, qucs_dataset));
+    }
+
+    return true;
+}
+
 /*!
  * \brief AbstractSpiceKernel::convertToQucsData Put data extracted from spice raw
  *        text output files (given in outputs_files property) into single XML
@@ -1157,6 +1218,12 @@ void AbstractSpiceKernel::convertToQucsData(const QString &qucs_dataset)
             } else if (outputfile.endsWith(".dc_op_xyce")) {
                 parseDC_OPoutputXY(full_outfile); }
         }
+        return;
+    }
+
+    // If ngspice produced a single rawfile, convert it directly to a Qucs dataset
+    // so plots are refreshed immediately without additional parsing.
+    if (convertRawOutputToDat(qucs_dataset)) {
         return;
     }
 

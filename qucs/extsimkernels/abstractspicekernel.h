@@ -56,6 +56,7 @@ private:
                            int NumPoints, int NumVars, bool isComplex);
     bool extractASCIISamples(QString &lin, QTextStream &ngsp_data, QList< QList<double> > &sim_points,
                              int NumVars, bool isComplex);
+    bool convertRawOutputToDat(const QString &qucs_dataset);
 
 protected:
     QString a_workdir;
