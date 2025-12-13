@@ -784,6 +784,10 @@ void QucsApp::fillSimulatorsComboBox() {
         QucsSettings.NgspiceExecutable = misc::unwrapExePath(QucsSettings.NgspiceExecutable);
         simulatorsCombobox->addItem(spicecompat::getDefaultSimulatorName(spicecompat::simNgspice), 1);
     }
+    if (misc::simulatorExists(QucsSettings.VacaskExecutable)) {
+        QucsSettings.VacaskExecutable = misc::unwrapExePath(QucsSettings.VacaskExecutable);
+        simulatorsCombobox->addItem(spicecompat::getDefaultSimulatorName(spicecompat::simVacask), spicecompat::simVacask);
+    }
     if (misc::simulatorExists(QucsSettings.XyceExecutable)) {
         QucsSettings.XyceExecutable = misc::unwrapExePath(QucsSettings.XyceExecutable);
         simulatorsCombobox->addItem(spicecompat::getDefaultSimulatorName(spicecompat::simXyce), 2);

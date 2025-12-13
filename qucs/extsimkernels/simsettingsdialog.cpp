@@ -29,24 +29,29 @@ SimSettingsDialog::SimSettingsDialog(QWidget *parent) :
     a_lblXyce(new QLabel(tr("Xyce executable location"))),
     a_lblNgspice(new QLabel(tr("Ngspice executable location"))),
     a_lblSpiceOpus(new QLabel(tr("SpiceOpus executable location"))),
+    a_lblVacask(new QLabel(tr("VACASK executable location"))),
     a_lblQucsator(new QLabel(tr("Qucsator executable location"))),
     a_lblNgspiceSimParam(new QLabel(tr("Ngspice CLI parameters"))),
     a_lblXyceSimParam(new QLabel(tr("Xyce CLI parameters"))),
     a_lblSpopusSimParam(new QLabel(tr("SpiceOpus CLI parameters"))),
+    a_lblVacaskSimParam(new QLabel(tr("VACASK CLI parameters"))),
     a_lblCompatMode(new QLabel(tr("Ngspice compatibility mode"))),
     a_cbxCompatMode(new QComboBox),
     a_edtNgspice(new QLineEdit(QucsSettings.NgspiceExecutable)),
     a_edtSpiceOpus(new QLineEdit(QucsSettings.SpiceOpusExecutable)),
     a_edtXyce(new QLineEdit(QucsSettings.XyceExecutable)),
+    a_edtVacask(new QLineEdit(QucsSettings.VacaskExecutable)),
     a_edtQucsator(new QLineEdit(QucsSettings.Qucsator)),
     a_edtNgspiceSimParam(new QLineEdit()),
     a_edtXyceSimParam(new QLineEdit()),
     a_edtSpopusSimParam(new QLineEdit()),
+    a_edtVacaskSimParam(new QLineEdit()),
     a_btnOK(new QPushButton(tr("Apply changes"))),
     a_btnCancel(new QPushButton(tr("Cancel"))),
     a_btnSetNgspice(new QPushButton(tr("Select ..."))),
     a_btnSetSpOpus(new QPushButton(tr("Select ..."))),
     a_btnSetXyce(new QPushButton(tr("Select ..."))),
+    a_btnSetVacask(new QPushButton(tr("Select ..."))),
     a_btnSetQucsator(new QPushButton(tr("Select ...")))
 {
     qDebug()<<QucsSettings.DefaultSimulator;
@@ -54,6 +59,7 @@ SimSettingsDialog::SimSettingsDialog(QWidget *parent) :
     a_edtNgspiceSimParam->setText(_settings::Get().item<QString>("NgspiceParams"));
     a_edtXyceSimParam->setText(_settings::Get().item<QString>("XyceParams"));
     a_edtSpopusSimParam->setText(_settings::Get().item<QString>("SpopusParams"));
+    a_edtVacaskSimParam->setText(_settings::Get().item<QString>("VacaskParams"));
 
 
     connect(a_btnOK,SIGNAL(clicked()),this,SLOT(slotApply()));
@@ -62,6 +68,7 @@ SimSettingsDialog::SimSettingsDialog(QWidget *parent) :
     connect(a_btnSetNgspice,SIGNAL(clicked()),this,SLOT(slotSetNgspice()));
     connect(a_btnSetXyce,SIGNAL(clicked()),this,SLOT(slotSetXyce()));
     connect(a_btnSetSpOpus,SIGNAL(clicked()),this,SLOT(slotSetSpiceOpus()));
+    connect(a_btnSetVacask,SIGNAL(clicked()),this,SLOT(slotSetVacask()));
     connect(a_btnSetQucsator,SIGNAL(clicked()),this,SLOT(slotSetQucsator()));
 
     QStringList lst_modes;
@@ -95,6 +102,14 @@ SimSettingsDialog::SimSettingsDialog(QWidget *parent) :
     top2->addLayout(h2);
     top2->addWidget(a_lblXyceSimParam);
     top2->addWidget(a_edtXyceSimParam);
+
+    top2->addWidget(a_lblVacask);
+    QHBoxLayout *h6 = new QHBoxLayout;
+    h6->addWidget(a_edtVacask,3);
+    h6->addWidget(a_btnSetVacask,1);
+    top2->addLayout(h6);
+    top2->addWidget(a_lblVacaskSimParam);
+    top2->addWidget(a_edtVacaskSimParam);
 
     top2->addWidget(a_lblSpiceOpus);
     QHBoxLayout *h7 = new QHBoxLayout;
@@ -136,6 +151,7 @@ void SimSettingsDialog::slotApply()
 {
     QucsSettings.NgspiceExecutable = a_edtNgspice->text();
     QucsSettings.XyceExecutable = a_edtXyce->text();
+    QucsSettings.VacaskExecutable = a_edtVacask->text();
     QucsSettings.SpiceOpusExecutable = a_edtSpiceOpus->text();
     QucsSettings.Qucsator = a_edtQucsator->text();
     settingsManager& qs = _settings::Get();
@@ -143,6 +159,7 @@ void SimSettingsDialog::slotApply()
     qs.setItem<QString>("NgspiceParams", a_edtNgspiceSimParam->text());
     qs.setItem<QString>("XyceParams", a_edtXyceSimParam->text());
     qs.setItem<QString>("SpopusParams", a_edtSpopusSimParam->text());
+    qs.setItem<QString>("VacaskParams", a_edtVacaskSimParam->text());
     accept();
     saveApplSettings();
   }
@@ -178,6 +195,14 @@ void SimSettingsDialog::slotSetSpiceOpus()
     QString s = QFileDialog::getOpenFileName(this,tr("Select SpiceOpus executable location"),a_edtSpiceOpus->text(),"All files (*)");
     if (!s.isEmpty()) {
         a_edtSpiceOpus->setText(s);
+    }
+}
+
+void SimSettingsDialog::slotSetVacask()
+{
+    QString s = QFileDialog::getOpenFileName(this,tr("Select VACASK executable location"),a_edtVacask->text(),"All files (*)");
+    if (!s.isEmpty()) {
+        a_edtVacask->setText(s);
     }
 }
 

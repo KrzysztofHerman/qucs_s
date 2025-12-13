@@ -122,6 +122,25 @@ void ExternSimDialog::slotSetSimulator()
         a_ngspice->setSimulatorParameters(_settings::Get().item<QString>("NgspiceParams"));
     }
         break;
+    case spicecompat::simVacask: {
+        a_xyce->setParallel(false);
+        connect(a_ngspice,SIGNAL(started()),this,SLOT(slotNgspiceStarted()));
+        connect(a_ngspice,SIGNAL(finished()),this,SLOT(slotProcessOutput()));
+        connect(a_ngspice,SIGNAL(errors(QProcess::ProcessError)),this,SLOT(slotNgspiceStartError(QProcess::ProcessError)));
+        QString cmd;
+        if (QFileInfo(QucsSettings.VacaskExecutable).isRelative()) {
+            cmd = QFileInfo(QucsSettings.BinDir + QucsSettings.VacaskExecutable).absoluteFilePath();
+        } else {
+            cmd = QFileInfo(QucsSettings.VacaskExecutable).absoluteFilePath();
+        }
+        if (QFileInfo::exists(cmd)) {
+            a_ngspice->setSimulatorCmd(cmd);
+        } else {
+            a_ngspice->setSimulatorCmd(QucsSettings.VacaskExecutable);
+        }
+        a_ngspice->setSimulatorParameters(_settings::Get().item<QString>("VacaskParams"));
+    }
+        break;
     case spicecompat::simXyce: {
         a_xyce->setParallel(false);
         connect(a_xyce,SIGNAL(started()),this,SLOT(slotNgspiceStarted()));
@@ -275,6 +294,9 @@ void ExternSimDialog::slotStart()
     case spicecompat::simNgspice:
         a_ngspice->slotSimulate();
         break;
+    case spicecompat::simVacask:
+        a_ngspice->slotSimulate();
+        break;
     case spicecompat::simXyce:
         a_xyce->slotSimulate();
         break;
@@ -313,6 +335,7 @@ void ExternSimDialog::slotSaveNetlist()
     switch (QucsSettings.DefaultSimulator)
     {
         case spicecompat::simNgspice:
+        case spicecompat::simVacask:
         case spicecompat::simSpiceOpus:
             a_ngspice->SaveNetlist(filename, a_netlist2Console);
             break;
@@ -367,6 +390,7 @@ bool ExternSimDialog::logContainsError(const QString &out)
     QStringList err_patterns;
     switch (QucsSettings.DefaultSimulator) {
     case spicecompat::simNgspice:
+    case spicecompat::simVacask:
         err_patterns<<"Error:"<<"ERROR"<<"Error "
                     <<"Syntax error:"<<"Expression err:"
                     <<"errors:"<<"simulation(s) aborted"
@@ -394,6 +418,7 @@ bool ExternSimDialog::logContainsWarning(const QString &out)
     QStringList warn_patterns;
     switch (QucsSettings.DefaultSimulator) {
     case spicecompat::simNgspice:
+    case spicecompat::simVacask:
         warn_patterns<<"Warning:"<<"WARNING"<<"Warning "
                     <<"warning:";
         break;

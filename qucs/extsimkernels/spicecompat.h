@@ -31,8 +31,9 @@ namespace spicecompat {
          simNgspice      = 0b00000001,
          simXyce         = 0b00000010,
          simSpiceOpus    = 0b00000100,
+         simVacask       = 0b00010000,
          simQucsator     = 0b00001000,
-         simSpice        = 0b00000111,
+         simSpice        = 0b00010111,
          simAll          = 0b11111111};
      enum CMgen_mode {cmgenSUBifs = 0, cmgenEDDifs = 1, cmgenSUBmod = 2, cmgenEDDmod = 3};
 

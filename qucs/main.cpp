@@ -123,6 +123,7 @@ bool loadSettings()
     QucsSettings.AdmsXmlBinDir.setPath(_settings::Get().item<QString>("AdmsXmlBinDir"));
     QucsSettings.AscoBinDir.setPath(_settings::Get().item<QString>("AscoBinDir"));
     QucsSettings.NgspiceExecutable = _settings::Get().item<QString>("NgspiceExecutable");
+    QucsSettings.VacaskExecutable = _settings::Get().item<QString>("VacaskExecutable");
     QucsSettings.XyceExecutable = _settings::Get().item<QString>("XyceExecutable");
     QucsSettings.XyceParExecutable = _settings::Get().item<QString>("XyceParExecutable");
     QucsSettings.SpiceOpusExecutable = _settings::Get().item<QString>("SpiceOpusExecutable");
@@ -218,6 +219,7 @@ bool saveApplSettings()
     qs.setItem<QString>("AdmsXmlBinDir", QucsSettings.AdmsXmlBinDir.canonicalPath());
     qs.setItem<QString>("AscoBinDir", QucsSettings.AscoBinDir.canonicalPath());
     qs.setItem<QString>("NgspiceExecutable",QucsSettings.NgspiceExecutable);
+    qs.setItem<QString>("VacaskExecutable",QucsSettings.VacaskExecutable);
     qs.setItem<QString>("XyceExecutable",QucsSettings.XyceExecutable);
     qs.setItem<QString>("XyceParExecutable",QucsSettings.XyceParExecutable);
     qs.setItem<QString>("SpiceOpusExecutable",QucsSettings.SpiceOpusExecutable);

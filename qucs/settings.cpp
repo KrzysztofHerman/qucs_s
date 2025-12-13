@@ -56,11 +56,13 @@ void settingsManager::initDefaults()
 
 #ifdef Q_OS_WIN
     m_Defaults["NgspiceExecutable"] = "ngspice_con.exe";
+    m_Defaults["VacaskExecutable"] = "vacask.exe";
     m_Defaults["XyceExecutable"] = "Xyce.exe";
     m_Defaults["RFLayoutExecutable"] = "qucsrflayout.exe";
     m_Defaults["OctaveExecutable"] = "octave.exe";
 #else
     m_Defaults["NgspiceExecutable"] = "ngspice";
+    m_Defaults["VacaskExecutable"] = "vacask";
     #ifndef Q_OS_MACOS
         m_Defaults["XyceExecutable"] = "/usr/local/Xyce-Release-6.8.0-OPENSOURCE/bin/Xyce";
     #else
@@ -76,6 +78,7 @@ void settingsManager::initDefaults()
                                 + "/qucs-s");
     m_Defaults["Nprocs"] = 4;
     m_Defaults["SpiceOpusExecutable"] = "spiceopus";
+    m_Defaults["VacaskParams"] = "";
     m_Defaults["SimParameters"] = "";
     m_Defaults["GraphAntiAliasing"] = false;
     m_Defaults["TextAntiAliasing"] = false;
