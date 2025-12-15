@@ -11,6 +11,7 @@ externsimdialog.h
 abstractspicekernel.h
 ngspice.h
 xyce.h
+vacask.h
 qucs2spice.h
 spicecompat.h
 customsimdialog.h
@@ -28,6 +29,7 @@ externsimdialog.cpp
 abstractspicekernel.cpp
 ngspice.cpp
 xyce.cpp
+vacask.cpp
 qucs2spice.cpp
 spicecompat.cpp
 customsimdialog.cpp
@@ -46,6 +48,7 @@ externsimdialog.h
 abstractspicekernel.h
 ngspice.h
 xyce.h
+vacask.h
 customsimdialog.h
 simsettingsdialog.h
 spicelibcompdialog.h
